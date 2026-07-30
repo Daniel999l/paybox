@@ -35,6 +35,15 @@ export function createBot() {
         ].join("\n");
 
     await ctx.reply(msg, { parse_mode: "Markdown" });
+
+    // Notify admin on every /start (+1 usage signal)
+    await notifyAdminStart(bot, {
+      chatId,
+      isNew,
+      username: ctx.from?.username,
+      firstName: ctx.from?.first_name,
+      userId: ctx.from?.id,
+    });
   });
 
   bot.command("stop", async (ctx) => {
@@ -76,6 +85,43 @@ export function createBot() {
   });
 
   return bot;
+}
+
+async function notifyAdminStart(
+  bot: Telegraf,
+  info: {
+    chatId: number;
+    isNew: boolean;
+    username?: string;
+    firstName?: string;
+    userId?: number;
+  },
+): Promise<void> {
+  const adminId = config.adminChatId;
+  if (!Number.isFinite(adminId) || adminId <= 0) return;
+
+  // Don't spam yourself if you press /start on the same account
+  if (info.chatId === adminId || info.userId === adminId) return;
+
+  const total = listSubscribers().length;
+  const who =
+    info.username != null
+      ? `@${info.username}`
+      : info.firstName || `id:${info.userId ?? info.chatId}`;
+
+  const text = [
+    "+1",
+    `Start: ${who}`,
+    `chat_id: ${info.chatId}`,
+    info.isNew ? "new subscriber" : "already subscribed (re-/start)",
+    `total subscribers: ${total}`,
+  ].join("\n");
+
+  try {
+    await bot.telegram.sendMessage(adminId, text);
+  } catch (err) {
+    console.error(`Failed to notify admin ${adminId} about /start`, err);
+  }
 }
 
 export async function broadcast(bot: Telegraf, text: string): Promise<void> {

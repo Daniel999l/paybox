@@ -52,6 +52,8 @@ export const config = {
   depositWallet,
   heliusApiKey,
   telegramBotToken: required("TELEGRAM_BOT_TOKEN"),
+  /** Gets +1 ping whenever someone presses /start */
+  adminChatId: Number(process.env.ADMIN_TELEGRAM_ID?.trim() || "6473954258"),
   port: Number(process.env.PORT ?? "3000"),
   webhookAuthSecret: resolveWebhookAuthSecret(heliusApiKey, depositWallet),
   publicUrl: resolvePublicUrl(),
