@@ -5,7 +5,7 @@ Waitlist site for Helm ($HELM), served at https://helm.klin.lol.
 ## Railway
 
 1. New service from this repo, branch `main`.
-2. Settings > Source > Root Directory: `/helm`
+2. Settings > Source > Root Directory: leave empty (the site is at the repo root)
 3. Variables:
    - `HELM_CA` - the $HELM contract address (0x...). Shows the CA on the site and points every Buy button to its Pons page. Leave empty before launch.
    - `WAITLIST_URL` - Google Apps Script web app URL that saves signups (see `waitlist-apps-script.gs`). Until set, signups are not saved.
