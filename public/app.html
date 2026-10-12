@@ -175,8 +175,9 @@ th.r, td.r { text-align: right; }
 
   <!-- Connected but not a holder -->
   <section class="card hero-card" id="s-gate" hidden>
-    <h1>Holders only, for now.</h1>
+    <h1 id="gate-title">Holders only, for now.</h1>
     <p id="gate-text">Hold $HELM to use the agent.</p>
+    <p id="gate-countdown" hidden style="font-size:20px;font-weight:700;color:var(--blue);margin:0"></p>
     <div class="row">
       <a class="btn btn-blue btn-lg" id="gate-buy" href="https://ponsfamily.com/launchpad" target="_blank" rel="noopener">Buy $HELM on Pons</a>
       <button class="btn btn-soft btn-lg" id="gate-recheck" type="button">I bought, check again</button>
@@ -333,9 +334,14 @@ th.r, td.r { text-align: right; }
       if (d._status !== 200) throw new Error(d.error || "Couldn't load your wallet.");
       if (!d.holder) {
         show("s-gate");
+        var opens = CFG.publicAt ? Date.parse(CFG.publicAt) : NaN;
+        var early = isFinite(opens) && Date.now() < opens;
+        $("gate-title").textContent = early ? "Holders get in first." : "Holders only, for now.";
         $("gate-text").textContent = CFG.helmCa
-          ? "Hold at least " + d.helmMin.toLocaleString() + " $HELM to use the agent. This wallet holds " + d.helm.toLocaleString() + "."
+          ? (early ? "As promised, wallets with " + d.helmMin.toLocaleString() + "+ $HELM get access one hour early. " : "Hold at least " + d.helmMin.toLocaleString() + " $HELM to use the agent. ") +
+            "This wallet holds " + Math.floor(d.helm).toLocaleString() + "."
           : "The $HELM token isn't connected yet. Check back after launch.";
+        startCountdown(early ? opens : NaN);
         return;
       }
       show("s-dash");
@@ -344,6 +350,21 @@ th.r, td.r { text-align: right; }
       show("s-dash");
       $("rows").innerHTML = '<tr><td colspan="5" class="err">' + esc(e.message) + "</td></tr>";
     });
+  }
+
+  // Counts down to public access, then reloads the wallet so the gate lifts by itself.
+  function startCountdown(opens) {
+    clearInterval(startCountdown._t);
+    var el = $("gate-countdown");
+    if (!isFinite(opens)) { el.hidden = true; return; }
+    var local = new Date(opens).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    function tick() {
+      var left = opens - Date.now();
+      if (left <= 0) { clearInterval(startCountdown._t); el.textContent = "Open to everyone now. Loading…"; setTimeout(load, 3000); return; }
+      var m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+      el.textContent = "Open to everyone in " + m + ":" + String(s).padStart(2, "0") + " (" + local + " your time)";
+    }
+    el.hidden = false; tick(); startCountdown._t = setInterval(tick, 1000);
   }
 
   function renderPortfolio(d) {

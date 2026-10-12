@@ -20,6 +20,10 @@ const ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
 const env = (k) => (process.env[k] || "").trim();
 const HELM_CA = ADDR_RE.test(env("HELM_CA")) ? env("HELM_CA") : "";
 const HELM_MIN = 100_000; // $HELM a wallet must hold to use the agent
+// Holders get in first. From this moment the app is open to everyone.
+// 05:30 GMT+1 on Oct 12 2026. Override with PUBLIC_AT (any ISO date) if needed.
+const PUBLIC_AT = Date.parse(env("PUBLIC_AT") || "2026-10-12T04:30:00Z");
+const isPublic = () => Number.isFinite(PUBLIC_AT) && Date.now() >= PUBLIC_AT;
 const LIFI_API_KEY = env("LIFI_API_KEY");
 
 const PUBLIC = path.join(__dirname, "public");
@@ -89,7 +93,7 @@ async function snapshot(address) {
     prices,
     ethRaw: bal.eth,
     helm,
-    holder: !HELM_CA ? false : helm >= HELM_MIN,
+    holder: (Boolean(HELM_CA) && helm >= HELM_MIN) || isPublic(),
   };
 }
 
@@ -103,6 +107,8 @@ async function api(req, res, url) {
       explorer: "https://robinhoodchain.blockscout.com",
       helmCa: HELM_CA,
       helmMin: HELM_MIN,
+      publicAt: Number.isFinite(PUBLIC_AT) ? new Date(PUBLIC_AT).toISOString() : null,
+      isPublic: isPublic(),
       buyUrl: HELM_CA ? `https://ponsfamily.com/launchpad/${HELM_CA}` : "https://ponsfamily.com/launchpad",
       courses: assets.COURSES,
       assets: assets.MANAGED.map(({ symbol, name, address, decimals, kind }) => ({ symbol, name, address, decimals, kind })),
@@ -150,7 +156,7 @@ async function api(req, res, url) {
     out.onCourse = plan.onCourse;
     out.message = plan.message;
     if (p === "/api/plan") {
-      if (!snap.holder) return send(res, 403, { ...out, error: `Hold at least ${HELM_MIN.toLocaleString()} $HELM to use the agent.` });
+      if (!snap.holder) return send(res, 403, { ...out, error: `Holders of ${HELM_MIN.toLocaleString()} $HELM get in first. Everyone else gets in soon.` });
       out.trades = plan.trades;
       out.note = await ai.explainPlan({ courseName: course.name, totalUsd: plan.totalUsd, holdings: plan.holdings, trades: plan.trades });
     }
@@ -168,7 +174,7 @@ async function api(req, res, url) {
     if (!/^[1-9][0-9]{0,40}$/.test(amount)) return send(res, 400, { error: "Invalid amount." });
 
     const snap = await snapshot(address);
-    if (!snap.holder) return send(res, 403, { error: `Hold at least ${HELM_MIN.toLocaleString()} $HELM to use the agent.` });
+    if (!snap.holder) return send(res, 403, { error: `Holders of ${HELM_MIN.toLocaleString()} $HELM get in first. Everyone else gets in soon.` });
     if (BigInt(amount) > (snap.balances[from.symbol] || 0n)) return send(res, 400, { error: `Not enough ${from.symbol} in your wallet for this trade.` });
 
     const q = new URLSearchParams({
@@ -240,6 +246,7 @@ server.listen(process.env.PORT || 3000, () => {
     `Helm on port ${process.env.PORT || 3000}` +
       ` | CA ${HELM_CA || "not set"}` +
       ` | holder min ${HELM_MIN}` +
+      ` | open to everyone ${isPublic() ? "now" : "at " + new Date(PUBLIC_AT).toISOString()}` +
       ` | AI notes ${ai.enabled() ? "on" : "off"}` +
       ` | waitlist ${store.configured() ? "MongoDB" : "NOT SAVING, set MONGO_URI"}`
   );
