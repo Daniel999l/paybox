@@ -1,20 +1,20 @@
 # Helm landing page
 
-Static waitlist site for Helm ($HELM), served at https://helm.klin.lol.
+Waitlist site for Helm ($HELM), served at https://helm.klin.lol.
 
-- `index.html` - the whole site (no build step)
-- `logo.png` - favicon and token image (400x400)
-- `og.png` - link preview image for X and other sites
-- `x-banner.png` - X header (1500x500)
-- `waitlist-apps-script.gs` - saves signups to a Google Sheet
+## Railway
 
-## Config
+1. New service from this repo, branch `main`.
+2. Settings > Source > Root Directory: `/helm`
+3. Variables:
+   - `HELM_CA` - the $HELM contract address (0x...). Shows the CA on the site and points every Buy button to its Pons page. Leave empty before launch.
+   - `WAITLIST_URL` - Google Apps Script web app URL that saves signups (see `waitlist-apps-script.gs`). Until set, signups are not saved.
+4. Settings > Networking > Custom Domain: `helm.klin.lol`
 
-At the bottom of `index.html`, in `CONFIG`:
+Changing a variable redeploys the service and the site picks up the new value.
 
-- `buyUrl` - set to the $HELM page on Pons once the token is live
-- `endpoint` - the Google Apps Script web app URL (see the comments in `waitlist-apps-script.gs`). Until this is set, signups are not saved.
+## Files
 
-## Deploy
-
-Upload this folder to any static host (Vercel, Netlify, Cloudflare Pages) with `helm` as the root directory.
+- `index.html` - the site
+- `server.js` - tiny Node server, no dependencies, fills in the env vars
+- `logo.png`, `og.png`, `x-banner.png` - brand images

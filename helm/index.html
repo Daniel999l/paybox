@@ -121,6 +121,9 @@ section { padding-block: 104px; }
 .tk { border-radius: 24px; padding: 30px; background: #151C47; min-width: 0; }
 .tk h3 { font-size: 22px; font-weight: 700; }
 .tk p { color: #AEB4D6; margin: 10px 0 0; }
+.ca { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 32px; padding: 12px 12px 12px 18px; border-radius: 18px; background: #151C47; max-width: 640px; }
+.ca-label { font-weight: 700; color: var(--tint); font-size: 14px; }
+.ca code { flex: 1; min-width: 0; overflow-wrap: anywhere; font: 500 14px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--paper); }
 .tk-note { margin-top: 28px; font-size: 14px; color: #7F87B3; }
 
 /* Waitlist */
@@ -285,7 +288,8 @@ footer { background: var(--blue); color: var(--paper); padding-block: 56px; }
         <div class="tk"><h3>Fees buy $HELM</h3><p>A share of agent fees and creator fees goes to buying back $HELM from the market.</p></div>
         <div class="tk"><h3>Better tools</h3><p>Bigger holders unlock custom rules, more portfolios and faster rebalancing.</p></div>
       </div>
-      <div style="margin-top:32px"><a class="btn btn-white js-buy" href="https://ponsfamily.com/launchpad" target="_blank" rel="noopener">Buy $HELM on Pons</a></div>
+      <div class="ca" id="ca-box" hidden><span class="ca-label">CA</span><code id="ca-val"></code><button type="button" class="btn btn-white btn-sm" id="ca-copy">Copy</button></div>
+      <div style="margin-top:20px"><a class="btn btn-white js-buy" href="https://ponsfamily.com/launchpad" target="_blank" rel="noopener">Buy $HELM on Pons</a></div>
       <p class="tk-note">Token details are planned and may change before launch. Follow <a href="https://x.com/helmdotlol" target="_blank" rel="noopener">@helmdotlol</a> for the contract address. Never trust an address posted anywhere else.</p>
     </div>
   </section>
@@ -403,12 +407,23 @@ footer { background: var(--blue); color: var(--paper); padding-block: 56px; }
   var CONFIG = {
     site: "https://helm.klin.lol",
     xHandle: "helmdotlol",
-    // Replace with the $HELM token page on Pons once it launches, e.g. https://ponsfamily.com/launchpad/0x...
+    // Filled in by server.js from the HELM_CA and WAITLIST_URL environment variables.
+    ca: "__HELM_CA__",
     buyUrl: "https://ponsfamily.com/launchpad",
     // Paste your Google Apps Script web app URL here to save signups to a Google Sheet.
-    endpoint: ""
+    endpoint: "__WAITLIST_URL__"
   };
 
+  if (!/^https:\/\//.test(CONFIG.endpoint)) CONFIG.endpoint = "";
+  if (/^0x[a-fA-F0-9]{40}$/.test(CONFIG.ca)) {
+    CONFIG.buyUrl = "https://ponsfamily.com/launchpad/" + CONFIG.ca;
+    document.getElementById("ca-val").textContent = CONFIG.ca;
+    document.getElementById("ca-box").hidden = false;
+    document.getElementById("ca-copy").addEventListener("click", function () {
+      var p = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(CONFIG.ca) : Promise.reject();
+      p.then(function () { toast("Contract address copied"); }).catch(function () { toast(CONFIG.ca); });
+    });
+  }
   document.querySelectorAll(".js-buy").forEach(function (a) { a.href = CONFIG.buyUrl; });
 
   // ===== Example portfolio =====
