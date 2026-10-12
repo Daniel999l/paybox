@@ -71,3 +71,23 @@ test("fmtUnits", () => {
   assert.strictEqual(fmtUnits(10n ** 18n, 18), "1");
   assert.strictEqual(fmtUnits(0n, 18), "0");
 });
+
+test("fee is charged on traded volume and buys leave room to pay it", () => {
+  const p = plan({ USDG: e6(1000) }, "steady", { feeBps: 30 });
+  const buys = p.trades.reduce((s, t) => s + Number(t.amountRaw) / 1e6, 0);
+  assert.ok(p.fee);
+  assert.ok(Math.abs(p.fee.usd - buys * 0.003) < 0.01, `fee ${p.fee.usd}`);
+  assert.ok(buys + p.fee.usd <= 1000, "buys plus fee fit in the wallet");
+});
+
+test("no trades means no fee", () => {
+  const p = plan({ USDG: e6(200), SPY: e18(300 / 500), NVDA: e18(200 / 200), AAPL: e18(150 / 250), MSFT: e18(150 / 400) }, "steady", { feeBps: 30 });
+  assert.strictEqual(p.fee, null);
+});
+
+test("tighter drift band reacts sooner", () => {
+  // SPY 2 points over target: ignored at 3 pts, acted on at 1.5 pts
+  const bal = { USDG: e6(200), SPY: e18(320 / 500), NVDA: e18(180 / 200), AAPL: e18(150 / 250), MSFT: e18(150 / 400) };
+  assert.strictEqual(plan(bal, "steady", { driftBand: 0.03 }).onCourse, true);
+  assert.strictEqual(plan(bal, "steady", { driftBand: 0.015 }).onCourse, false);
+});

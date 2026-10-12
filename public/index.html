@@ -37,6 +37,7 @@
   color-scheme: light;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
@@ -124,6 +125,9 @@ section { padding-block: 104px; }
 .ca { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 32px; padding: 12px 12px 12px 18px; border-radius: 18px; background: #151C47; max-width: 640px; }
 .ca-label { font-weight: 700; color: var(--tint); font-size: 14px; }
 .ca code { flex: 1; min-width: 0; overflow-wrap: anywhere; font: 500 14px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--paper); }
+.burned { margin-top: 32px; font-size: 17px; color: #DCE2FF; }
+.burned b { color: var(--paper); font-size: 22px; }
+.burned a { color: var(--tint); }
 .tk-note { margin-top: 28px; font-size: 14px; color: #7F87B3; }
 
 /* Waitlist */
@@ -282,16 +286,17 @@ footer { background: var(--blue); color: var(--paper); padding-block: 56px; }
       <div class="sec-head">
         <div class="kicker">$HELM</div>
         <h2>The token that runs the ship.</h2>
-        <p>$HELM launches on Pons. It decides who gets in first and what the agent can do for you.</p>
+        <p>$HELM decides what the agent can do for you, and every rebalance fee buys it back and burns it.</p>
       </div>
       <div class="tk-grid">
-        <div class="tk"><h3>First on board</h3><p>Holders get access to the agent before anyone else, in order of how much they hold.</p></div>
-        <div class="tk"><h3>Fees buy $HELM</h3><p>A share of agent fees and creator fees goes to buying back $HELM from the market.</p></div>
-        <div class="tk"><h3>Better tools</h3><p>Bigger holders unlock custom rules, more portfolios and faster rebalancing.</p></div>
+        <div class="tk"><h3>Fees buy and burn $HELM</h3><p>Every rebalance pays a small fee in USDG. A bot spends it buying $HELM and sends it straight to the dead address.</p></div>
+        <div class="tk"><h3>Captain · 100,000 $HELM</h3><p>Unlocks the Bold course and one custom course with your own rules. Rebalances at 3 points of drift. 0.20% fee.</p></div>
+        <div class="tk"><h3>Admiral · 1,000,000 $HELM</h3><p>Three custom courses, the fastest rebalancing at 1.5 points of drift, and the lowest fee at 0.10%.</p></div>
       </div>
+      <p class="burned" id="burned" hidden><b id="burned-total"></b> $HELM burned so far across <span id="burned-count"></span>. <a id="burned-link" href="#" target="_blank" rel="noopener">See the latest burn</a></p>
       <div class="ca" id="ca-box" hidden><span class="ca-label">CA</span><code id="ca-val"></code><button type="button" class="btn btn-white btn-sm" id="ca-copy">Copy</button></div>
       <div style="margin-top:20px"><a class="btn btn-white js-buy" href="https://ponsfamily.com/launchpad" target="_blank" rel="noopener">Buy $HELM on Pons</a></div>
-      <p class="tk-note">Token details are planned and may change before launch. Follow <a href="https://x.com/helmdotlol" target="_blank" rel="noopener">@helmdotlol</a> for the contract address. Never trust an address posted anywhere else.</p>
+      <p class="tk-note">Anyone can use Helm. Deckhands (under 100,000 $HELM) get the Calm and Steady courses, rebalance at 5 points of drift and pay 0.30%. Follow <a href="https://x.com/helmdotlol" target="_blank" rel="noopener">@helmdotlol</a> for the contract address. Never trust an address posted anywhere else.</p>
     </div>
   </section>
 
@@ -379,7 +384,7 @@ footer { background: var(--blue); color: var(--paper); padding-block: 56px; }
         <details><summary>What is Helm?</summary><p>Helm is an AI agent that manages a portfolio of tokenized stocks on Robinhood Chain. You choose a risk level, and it builds and rebalances the portfolio for you.</p></details>
         <details><summary>Does Helm hold my money?</summary><p>No. Your stocks sit in a vault that you own. The agent is allowed to rebalance inside it, but only you can withdraw.</p></details>
         <details><summary>When does it launch?</summary><p>The agent is in development. Waitlist members get access in waves, starting with the first wave and the people with the most referrals.</p></details>
-        <details><summary>Do I need $HELM to use it?</summary><p>Holders get in first and unlock extra tools. Full details come before launch on <a href="https://x.com/helmdotlol" target="_blank" rel="noopener">@helmdotlol</a>.</p></details>
+        <details><summary>Do I need $HELM to use it?</summary><p>No. Anyone can use Helm. Holding 100,000 $HELM makes you a Captain: the Bold course, a custom course, faster rebalancing and a lower fee. 1,000,000 makes you an Admiral with three custom courses and the lowest fee.</p></details>
         <details><summary>Is this financial advice?</summary><p>No. Helm is software that follows the rules you set. Stocks and tokens can lose value, so only put in what you can afford to lose.</p></details>
       </div>
     </div>
@@ -426,6 +431,15 @@ footer { background: var(--blue); color: var(--paper); padding-block: 56px; }
     });
   }
   document.querySelectorAll(".js-buy").forEach(function (a) { a.href = CONFIG.buyUrl; });
+
+  // Live burn total from the chain.
+  fetch("/api/burns").then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    if (!d || !d.count) return;
+    document.getElementById("burned-total").textContent = Math.floor(d.totalBurned).toLocaleString();
+    document.getElementById("burned-count").textContent = d.count + (d.count === 1 ? " burn" : " burns");
+    document.getElementById("burned-link").href = "https://robinhoodchain.blockscout.com/tx/" + d.burns[0].tx;
+    document.getElementById("burned").hidden = false;
+  }).catch(function () {});
 
   // ===== Example portfolio =====
   var COURSES = {

@@ -132,6 +132,55 @@ th.r, td.r { text-align: right; }
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); background: var(--ink); color: var(--paper); padding: 12px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; max-width: calc(100% - 32px); text-align: center; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .foot { font-size: 12px; color: var(--muted); max-width: 70ch; }
+
+/* Tiers */
+.tier-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+.tier-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+@media (max-width: 760px) { .tier-grid { grid-template-columns: 1fr; } }
+.tier { border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.tier.current { border-color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue); background: #FAFBFF; }
+.tier .t-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tier h3 { font-size: 19px; font-weight: 800; }
+.tier .t-min { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tier ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; }
+.tier li { display: flex; gap: 8px; }
+.tier li::before { content: ""; flex: none; width: 6px; height: 6px; margin-top: 8px; border-radius: 50%; background: var(--blue); }
+.you { font-size: 12px; font-weight: 700; color: var(--paper); background: var(--blue); padding: 3px 9px; border-radius: 999px; }
+.progress { height: 8px; border-radius: 999px; background: var(--wash); overflow: hidden; margin-top: 6px; }
+.progress i { display: block; height: 100%; background: var(--blue); border-radius: 999px; }
+
+/* Course list */
+.courses { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.cbtn { height: 42px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); font: 600 15px/1 var(--font); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.cbtn[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: var(--paper); }
+.cbtn.locked { color: var(--muted); background: var(--bg); border-style: dashed; }
+.cbtn .lock { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.cbtn.add { border-style: dashed; color: var(--blue); }
+.course-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Course editor */
+.editor { margin-top: 18px; padding: 18px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); display: grid; gap: 14px; }
+.editor label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.editor input[type="text"] { height: 44px; border-radius: 12px; border: 1px solid var(--line); padding: 0 14px; font: 500 15px var(--font); width: 100%; max-width: 320px; background: var(--paper); color: var(--ink); }
+.wgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.wcell { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 8px 8px 8px 12px; }
+.wcell span { font-weight: 700; font-size: 14px; }
+.wcell input { width: 64px; height: 34px; border-radius: 8px; border: 1px solid var(--line); text-align: right; padding: 0 8px; font: 600 14px var(--font); font-variant-numeric: tabular-nums; color: var(--ink); background: var(--paper); }
+.wcell input:focus, .editor input[type="text"]:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px var(--wash); }
+.wsum { font-weight: 700; font-variant-numeric: tabular-nums; }
+.wsum.bad { color: var(--down); }
+.wsum.good { color: var(--up); }
+
+/* Fee step */
+.side.fee { background: var(--wash); color: var(--blue); }
+
+/* Burns */
+.burn-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 14px; }
+@media (max-width: 640px) { .burn-stats { grid-template-columns: 1fr 1fr; } }
+.burn-list { display: grid; gap: 8px; margin-top: 16px; }
+.burn-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; padding: 10px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.burn-row a { color: var(--blue); font-weight: 600; }
+.burn-row .amt { font-weight: 700; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -173,17 +222,6 @@ th.r, td.r { text-align: right; }
     <p class="err" id="connect-err" hidden></p>
   </section>
 
-  <!-- Connected but not a holder -->
-  <section class="card hero-card" id="s-gate" hidden>
-    <h1 id="gate-title">Holders only, for now.</h1>
-    <p id="gate-text">Hold $HELM to use the agent.</p>
-    <p id="gate-countdown" hidden style="font-size:20px;font-weight:700;color:var(--blue);margin:0"></p>
-    <div class="row">
-      <a class="btn btn-blue btn-lg" id="gate-buy" href="https://ponsfamily.com/launchpad" target="_blank" rel="noopener">Buy $HELM on Pons</a>
-      <button class="btn btn-soft btn-lg" id="gate-recheck" type="button">I bought, check again</button>
-    </div>
-  </section>
-
   <!-- Dashboard -->
   <div id="s-dash" hidden style="display:grid;gap:20px">
     <section class="card summary" aria-label="Portfolio summary">
@@ -195,11 +233,12 @@ th.r, td.r { text-align: right; }
       <div class="stat">
         <span class="label">Largest drift</span>
         <span class="mid" id="drift">0%</span>
-        <span class="muted" style="font-size:13px">Helm acts past 3 points</span>
+        <span class="muted" style="font-size:13px" id="band-text">Helm acts past 5 points</span>
       </div>
       <div class="stat">
-        <span class="label">$HELM held</span>
-        <span class="mid" id="helm-held">0</span>
+        <span class="label">Your tier</span>
+        <span class="mid" id="tier-name">Deckhand</span>
+        <span class="muted" style="font-size:13px" id="helm-held">0 $HELM</span>
         <span class="muted" style="font-size:13px" id="gas">ETH for gas: 0</span>
         <span class="gas-warn" id="gas-warn" hidden>Add a little ETH to pay for gas.</span>
       </div>
@@ -211,14 +250,34 @@ th.r, td.r { text-align: right; }
           <span class="label">Your course</span>
           <h2 style="font-size:26px;margin-top:4px" id="course-name">Steady</h2>
         </div>
-        <span class="muted" id="course-rebal">Suggested check-in: every 2 weeks</span>
+        <span class="muted" id="course-rebal"></span>
       </div>
-      <div class="seg" role="group" aria-label="Course">
-        <button type="button" id="c-calm" data-course="calm" aria-pressed="false">Calm</button>
-        <button type="button" id="c-steady" data-course="steady" aria-pressed="true">Steady</button>
-        <button type="button" id="c-bold" data-course="bold" aria-pressed="false">Bold</button>
-      </div>
+      <div class="courses" id="course-list" role="group" aria-label="Courses"></div>
       <p class="course-desc" id="course-desc"></p>
+      <div class="course-actions" id="course-actions" hidden>
+        <button class="btn btn-soft" id="edit-course" type="button">Edit this course</button>
+      </div>
+
+      <form class="editor" id="editor" hidden novalidate>
+        <div>
+          <label for="ed-name">Course name</label><br>
+          <input type="text" id="ed-name" maxlength="24" placeholder="My course">
+        </div>
+        <div>
+          <label>Target weights, in whole percents</label>
+          <div class="wgrid" id="ed-weights" style="margin-top:8px"></div>
+        </div>
+        <div class="course-head" style="align-items:center">
+          <span>Total: <span class="wsum" id="ed-sum">0%</span> <span class="muted" id="ed-rule"></span></span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-soft" id="ed-delete" type="button" hidden>Delete</button>
+            <button class="btn btn-soft" id="ed-cancel" type="button">Cancel</button>
+            <button class="btn btn-blue" id="ed-save" type="submit">Sign and save</button>
+          </div>
+        </div>
+        <p class="err" id="ed-err" hidden></p>
+        <p class="fine" style="margin:0">Saving asks your wallet to sign a message. It proves the course is yours and costs no gas.</p>
+      </form>
     </section>
 
     <section class="card">
@@ -250,6 +309,29 @@ th.r, td.r { text-align: right; }
       <p class="err" id="plan-err" hidden></p>
     </section>
 
+    <section class="card">
+      <div class="tier-head">
+        <div><span class="label">$HELM tiers</span><h2 style="font-size:22px;margin-top:4px">Hold more, Helm does more</h2></div>
+        <a class="btn btn-blue" id="tier-buy" href="https://ponsfamily.com/launchpad" target="_blank" rel="noopener">Buy $HELM</a>
+      </div>
+      <p class="muted" id="tier-next" style="margin:12px 0 0"></p>
+      <div class="progress" id="tier-progress" hidden><i style="width:0%"></i></div>
+      <div class="tier-grid" id="tier-grid"></div>
+    </section>
+
+    <section class="card" id="burn-card">
+      <div class="tier-head">
+        <div><span class="label">Buyback and burn</span><h2 style="font-size:22px;margin-top:4px">Every fee buys and burns $HELM</h2></div>
+      </div>
+      <p class="muted" style="margin:12px 0 0" id="burn-explain">Helm's fee on each rebalance goes to the treasury. A bot spends it buying $HELM and sends it straight to the dead address. Every burn is listed here with its transaction.</p>
+      <div class="burn-stats">
+        <div class="stat"><span class="label">$HELM burned</span><span class="mid" id="burn-total">…</span></div>
+        <div class="stat"><span class="label">Of total supply</span><span class="mid" id="burn-pct">…</span></div>
+        <div class="stat"><span class="label">Burns</span><span class="mid" id="burn-count">…</span></div>
+      </div>
+      <div class="burn-list" id="burn-list"></div>
+    </section>
+
     <p class="foot">$HELM and tokenized stocks are subject to the same volatility as any other token or stock. You can lose some or all of what you put in. Stock tokens aren't available to US persons. Nothing here is financial advice.</p>
   </div>
 </main>
@@ -260,28 +342,34 @@ th.r, td.r { text-align: right; }
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var CFG = null, account = null, course = "steady", lastPlan = null, running = false;
+  var me = null; // last portfolio response: tier, helm, holdings
+  var custom = []; // saved custom courses
+  var editing = null; // slot being edited
   var eth = window.ethereum;
 
   function toast(msg) {
     var t = $("toast"); t.textContent = msg; t.classList.add("show");
-    clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove("show"); }, 2600);
+    clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove("show"); }, 2800);
   }
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
   function money(x) { return "$" + (x || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function pct(x) { return (x * 100).toFixed(1).replace(/\.0$/, "") + "%"; }
+  function pts(x) { return (x * 100).toFixed(1).replace(/\.0$/, "") + " points"; }
+  function num(x) { return Math.floor(x || 0).toLocaleString(); }
   function short(a) { return a.slice(0, 6) + "…" + a.slice(-4); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function show(id) { ["s-connect", "s-gate", "s-dash"].forEach(function (s) { $(s).hidden = s !== id; }); }
+  function show(id) { ["s-connect", "s-dash"].forEach(function (s) { $(s).hidden = s !== id; }); }
   function walletError(e) {
     if (e && (e.code === 4001 || /reject|denied|cancel/i.test(e.message || ""))) return "You cancelled in your wallet.";
     return (e && (e.shortMessage || e.message)) || "Something went wrong.";
   }
-
-  function getJSON(url) {
-    return fetch(url).then(function (r) {
+  function getJSON(url, opts) {
+    return fetch(url, opts).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) { d._status = r.status; return d; });
     });
   }
+  function tierByKey(k) { return CFG.tiers.filter(function (t) { return t.key === k; })[0]; }
+  function courseUnlock(k) { return CFG.tiers.filter(function (t) { return t.courses.indexOf(k) >= 0; })[0]; }
 
   // ===== Wallet & chain =====
   var CHAIN_HEX = "0x1237";
@@ -319,58 +407,43 @@ th.r, td.r { text-align: right; }
 
   function setAccount(a) {
     account = a ? a : null;
+    closeEditor();
     if (!account) { $("wallet-btn").textContent = "Connect wallet"; show("s-connect"); return; }
     $("wallet-btn").textContent = short(account);
     course = store("helm_course_" + account.toLowerCase()) || "steady";
-    renderCourse();
-    load();
+    show("s-dash");
+    loadCourses().then(load);
   }
 
   // ===== Data =====
+  function loadCourses() {
+    return getJSON("/api/courses?address=" + account).then(function (d) { custom = d.courses || []; }).catch(function () { custom = []; });
+  }
+
   function load() {
     if (!account) return;
     $("rows").innerHTML = '<tr><td colspan="5" class="skeleton">Loading your wallet…</td></tr>';
-    return getJSON("/api/portfolio?address=" + account + "&course=" + course).then(function (d) {
-      if (d._status !== 200) throw new Error(d.error || "Couldn't load your wallet.");
-      if (!d.holder) {
-        show("s-gate");
-        var opens = CFG.publicAt ? Date.parse(CFG.publicAt) : NaN;
-        var early = isFinite(opens) && Date.now() < opens;
-        $("gate-title").textContent = early ? "Holders get in first." : "Holders only, for now.";
-        $("gate-text").textContent = CFG.helmCa
-          ? (early ? "As promised, wallets with " + d.helmMin.toLocaleString() + "+ $HELM get access one hour early. " : "Hold at least " + d.helmMin.toLocaleString() + " $HELM to use the agent. ") +
-            "This wallet holds " + Math.floor(d.helm).toLocaleString() + "."
-          : "The $HELM token isn't connected yet. Check back after launch.";
-        startCountdown(early ? opens : NaN);
-        return;
+    return getJSON("/api/portfolio?address=" + account + "&course=" + encodeURIComponent(course)).then(function (d) {
+      if (d._status === 403 || d._status === 404) {
+        // Course not available for this wallet (tier changed or course deleted): fall back to Steady.
+        if (d.error) toast(d.error);
+        course = "steady"; store("helm_course_" + account.toLowerCase(), course);
+        return load();
       }
-      show("s-dash");
+      if (d._status !== 200) throw new Error(d.error || "Couldn't load your wallet.");
+      me = d;
+      renderTier(d);
+      renderCourses();
       renderPortfolio(d);
     }).catch(function (e) {
-      show("s-dash");
       $("rows").innerHTML = '<tr><td colspan="5" class="err">' + esc(e.message) + "</td></tr>";
     });
-  }
-
-  // Counts down to public access, then reloads the wallet so the gate lifts by itself.
-  function startCountdown(opens) {
-    clearInterval(startCountdown._t);
-    var el = $("gate-countdown");
-    if (!isFinite(opens)) { el.hidden = true; return; }
-    var local = new Date(opens).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    function tick() {
-      var left = opens - Date.now();
-      if (left <= 0) { clearInterval(startCountdown._t); el.textContent = "Open to everyone now. Loading…"; setTimeout(load, 3000); return; }
-      var m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
-      el.textContent = "Open to everyone in " + m + ":" + String(s).padStart(2, "0") + " (" + local + " your time)";
-    }
-    el.hidden = false; tick(); startCountdown._t = setInterval(tick, 1000);
   }
 
   function renderPortfolio(d) {
     $("total").textContent = money(d.totalUsd);
     $("drift").textContent = pct(d.maxDrift);
-    $("helm-held").textContent = Math.floor(d.helm).toLocaleString();
+    $("band-text").textContent = "Helm acts past " + pts(d.tier.driftBand);
     $("gas").textContent = "ETH for gas: " + d.ethForGas.toFixed(5);
     $("gas-warn").hidden = d.ethForGas >= 0.0002;
     var pill = $("status-pill");
@@ -379,12 +452,13 @@ th.r, td.r { text-align: right; }
     else { pill.className = "pill off"; pill.textContent = "Off course"; }
 
     var names = {}; CFG.assets.forEach(function (a) { names[a.symbol] = a.name; });
+    var band = d.tier.driftBand;
     var rows = d.holdings.slice().sort(function (a, b) { return b.target - a.target || b.valueUsd - a.valueUsd; });
     $("rows").innerHTML = rows.map(function (h) {
       var max = Math.max(h.weight, h.target, 0.01);
       var scale = 100 / Math.max(0.5, max * 1.15);
       var drift = h.weight - h.target;
-      var cls = Math.abs(drift) > 0.03 ? "drift-up" : "drift-ok";
+      var cls = Math.abs(drift) > band ? "drift-up" : "drift-ok";
       return "<tr>" +
         '<td><span class="sym">' + esc(h.symbol) + "<small>" + esc(names[h.symbol] || "") + "</small></span></td>" +
         '<td class="r">' + esc(h.amount) + "</td>" +
@@ -395,13 +469,151 @@ th.r, td.r { text-align: right; }
     }).join("") || '<tr><td colspan="5" class="skeleton">No Helm assets in this wallet yet. Add USDG to start.</td></tr>';
   }
 
-  function renderCourse() {
-    var c = CFG.courses[course];
-    ["calm", "steady", "bold"].forEach(function (k) { $("c-" + k).setAttribute("aria-pressed", String(k === course)); });
+  // ===== Tiers =====
+  function renderTier(d) {
+    $("tier-name").textContent = d.tier.name;
+    $("helm-held").textContent = num(d.helm) + " $HELM";
+    if (d.next) {
+      var prev = tierByKey(d.tier.key).min;
+      var share = Math.max(0, Math.min(1, (d.helm - prev) / (d.next.min - prev)));
+      $("tier-next").textContent = "You hold " + num(d.helm) + " $HELM. Hold " + num(d.next.min) + " to reach " + d.next.name + ".";
+      $("tier-progress").hidden = false;
+      $("tier-progress").firstChild.style.width = (share * 100).toFixed(1) + "%";
+    } else {
+      $("tier-next").textContent = "You hold " + num(d.helm) + " $HELM. You're at the top tier.";
+      $("tier-progress").hidden = true;
+    }
+    $("tier-grid").innerHTML = CFG.tiers.map(function (t) {
+      var names = t.courses.map(function (k) { return CFG.courses[k].name; }).join(", ");
+      var perks = [
+        names + " courses",
+        t.custom ? t.custom + " custom course" + (t.custom > 1 ? "s" : "") + " with your own rules" : "No custom courses",
+        "Rebalances past " + pts(t.driftBand) + " of drift",
+        CFG.feesOn ? (t.feeBps / 100).toFixed(2) + "% fee, spent on buyback and burn" : "No fee yet"
+      ];
+      var current = t.key === d.tier.key;
+      return '<div class="tier' + (current ? " current" : "") + '"><div class="t-top"><h3>' + esc(t.name) + "</h3>" + (current ? '<span class="you">You</span>' : "") + "</div>" +
+        '<span class="t-min">' + (t.min ? num(t.min) + "+ $HELM" : "Anyone") + "</span>" +
+        "<ul>" + perks.map(function (p) { return "<li>" + esc(p) + "</li>"; }).join("") + "</ul></div>";
+    }).join("");
+  }
+
+  // ===== Courses =====
+  function currentCourse() {
+    if (CFG.courses[course]) return CFG.courses[course];
+    var c = custom.filter(function (x) { return x.id === course; })[0];
+    return c ? { name: c.name, weights: c.weights, desc: "Your own course.", rebalance: "when it drifts" } : CFG.courses.steady;
+  }
+
+  function renderCourses() {
+    var t = me ? me.tier : tierByKey("deckhand");
+    var html = ["calm", "steady", "bold"].map(function (k) {
+      var ok = t.courses.indexOf(k) >= 0;
+      var u = courseUnlock(k);
+      return '<button type="button" class="cbtn' + (ok ? "" : " locked") + '" data-course="' + k + '" aria-pressed="' + (course === k) + '"' +
+        (ok ? "" : ' data-locked="' + esc(CFG.courses[k].name + " unlocks at " + num(u.min) + " $HELM.") + '"') + ">" +
+        esc(CFG.courses[k].name) + (ok ? "" : ' <span class="lock">' + esc(u.name) + "</span>") + "</button>";
+    }).join("");
+    custom.forEach(function (c) {
+      if (c.slot >= t.custom) return;
+      html += '<button type="button" class="cbtn" data-course="' + c.id + '" aria-pressed="' + (course === c.id) + '">' + esc(c.name) + "</button>";
+    });
+    var used = custom.filter(function (c) { return c.slot < t.custom; }).length;
+    if (t.custom > used) html += '<button type="button" class="cbtn add" id="new-course">+ New course</button>';
+    else if (!t.custom) html += '<button type="button" class="cbtn locked" data-locked="Custom courses unlock at ' + num(tierByKey("captain").min) + ' $HELM.">+ Custom course <span class="lock">Captain</span></button>';
+    $("course-list").innerHTML = html;
+
+    var c = currentCourse();
     $("course-name").textContent = c.name;
     $("course-desc").textContent = c.desc + " Target: " + Object.keys(c.weights).map(function (s) { return s + " " + pct(c.weights[s]); }).join(", ") + ".";
-    $("course-rebal").textContent = "Suggested check-in: " + c.rebalance;
+    $("course-rebal").textContent = "Helm acts past " + pts(t.driftBand) + " of drift";
+    $("course-actions").hidden = !/^custom-/.test(course);
   }
+
+  $("course-list").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b || running) return;
+    if (b.id === "new-course") return openEditor(null);
+    if (b.getAttribute("data-locked")) return toast(b.getAttribute("data-locked"));
+    course = b.getAttribute("data-course");
+    if (account) store("helm_course_" + account.toLowerCase(), course);
+    closeEditor(); resetPlan(); renderCourses(); load();
+  });
+
+  // ===== Course editor =====
+  function openEditor(slot) {
+    var t = me.tier;
+    var free = [];
+    for (var i = 0; i < t.custom; i++) if (!custom.some(function (c) { return c.slot === i; })) free.push(i);
+    var existing = slot === null ? null : custom.filter(function (c) { return c.slot === slot; })[0];
+    editing = existing ? existing.slot : free[0];
+    if (editing === undefined) return toast("No free custom course slots on your tier.");
+    var w = existing ? existing.weights : CFG.courses.steady.weights;
+    $("ed-name").value = existing ? existing.name : "";
+    $("ed-weights").innerHTML = CFG.assets.map(function (a) {
+      var v = Math.round((w[a.symbol] || 0) * 100);
+      return '<label class="wcell" for="w-' + a.symbol + '"><span>' + a.symbol + '</span><input id="w-' + a.symbol + '" data-sym="' + a.symbol + '" type="number" inputmode="numeric" min="0" max="100" step="1" value="' + v + '"></label>';
+    }).join("");
+    $("ed-rule").textContent = "· max " + CFG.maxSingleStock + "% per stock";
+    $("ed-delete").hidden = !existing;
+    $("ed-err").hidden = true;
+    $("editor").hidden = false;
+    updateSum();
+    $("ed-name").focus();
+  }
+  function closeEditor() { editing = null; $("editor").hidden = true; }
+  function readWeights() {
+    var w = {}, sum = 0;
+    $("ed-weights").querySelectorAll("input").forEach(function (i) { var v = parseInt(i.value, 10) || 0; if (v > 0) { w[i.getAttribute("data-sym")] = v; sum += v; } });
+    return { weights: w, sum: sum };
+  }
+  function updateSum() {
+    var s = readWeights().sum, el = $("ed-sum");
+    el.textContent = s + "%"; el.className = "wsum " + (s === 100 ? "good" : "bad");
+  }
+  $("ed-weights").addEventListener("input", updateSum);
+  $("ed-cancel").addEventListener("click", closeEditor);
+  $("edit-course").addEventListener("click", function () {
+    var c = custom.filter(function (x) { return x.id === course; })[0];
+    if (c) openEditor(c.slot);
+  });
+
+  function utf8Hex(s) { return "0x" + Array.from(new TextEncoder().encode(s)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join(""); }
+  function signed(body) {
+    var time = new Date().toISOString();
+    var msg = "Helm: save my custom courses\nWallet: " + account.toLowerCase() + "\nTime: " + time;
+    return eth.request({ method: "personal_sign", params: [utf8Hex(msg), account] }).then(function (sig) {
+      body.address = account; body.time = time; body.signature = sig;
+      return getJSON("/api/courses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    });
+  }
+  function editorDone(d, msg, newCourse) {
+    if (d._status !== 200) throw new Error(d.error || "Couldn't save.");
+    toast(msg);
+    closeEditor();
+    return loadCourses().then(function () {
+      if (newCourse) { course = newCourse; store("helm_course_" + account.toLowerCase(), course); }
+      resetPlan(); return load();
+    });
+  }
+  function editorFail(e) { $("ed-err").textContent = walletError(e); $("ed-err").hidden = false; }
+
+  $("editor").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var r = readWeights();
+    if (r.sum !== 100) { $("ed-err").textContent = "Weights add up to " + r.sum + "%. They need to add up to 100%."; $("ed-err").hidden = false; return; }
+    var slot = editing;
+    $("ed-save").disabled = true;
+    signed({ action: "save", slot: slot, name: $("ed-name").value.trim() || "My course", weights: r.weights })
+      .then(function (d) { return editorDone(d, "Course saved", "custom-" + slot); })
+      .catch(editorFail)
+      .then(function () { $("ed-save").disabled = false; });
+  });
+  $("ed-delete").addEventListener("click", function () {
+    var slot = editing;
+    signed({ action: "delete", slot: slot })
+      .then(function (d) { return editorDone(d, "Course deleted", course === "custom-" + slot ? "steady" : null); })
+      .catch(editorFail);
+  });
 
   // ===== Plan =====
   function resetPlan() {
@@ -416,23 +628,32 @@ th.r, td.r { text-align: right; }
     if (running) return;
     resetPlan();
     $("plan-btn").disabled = true; $("plan-btn").textContent = "Planning…";
-    getJSON("/api/plan?address=" + account + "&course=" + course).then(function (d) {
+    getJSON("/api/plan?address=" + account + "&course=" + encodeURIComponent(course)).then(function (d) {
       if (d._status !== 200) throw new Error(d.error || "Couldn't build a plan.");
-      renderPortfolio(d);
+      me = d; renderPortfolio(d);
       lastPlan = d;
       $("plan-msg").textContent = d.message;
       if (d.note) { $("plan-note-text").textContent = d.note; $("plan-note").hidden = false; }
       if (!d.trades || !d.trades.length) { $("plan-title").textContent = d.onCourse ? "You're on course" : "Nothing to trade yet"; return; }
       $("plan-title").textContent = d.trades.length + " trade" + (d.trades.length > 1 ? "s" : "") + " to get back on course";
-      $("plan-msg").textContent = "Review each trade, then approve. Sells run first.";
-      $("trades").innerHTML = d.trades.map(function (t, i) {
+      $("plan-msg").textContent = "Review each step, then approve. Sells run first.";
+      var html = d.trades.map(function (t, i) {
         var what = t.side === "sell" ? "Sell " + t.amount + " " + t.from + " for USDG" : "Buy " + t.to + " with " + t.amount + " USDG";
         return '<div class="trade" id="t' + i + '"><span class="side ' + t.side + '">' + t.side + "</span>" +
           '<span class="what">' + esc(what) + '<span class="why">' + esc(t.reason) + "</span></span>" +
           '<span class="val">' + money(t.valueUsd) + "</span>" +
           '<span class="st" id="st' + i + '">Waiting</span></div>';
       }).join("");
-      $("run-btn").textContent = "Approve and run " + d.trades.length + " trade" + (d.trades.length > 1 ? "s" : "");
+      if (d.fee) {
+        html += '<div class="trade" id="tfee"><span class="side fee">fee</span>' +
+          '<span class="what">Helm fee: ' + (d.fee.bps / 100).toFixed(2) + "% of " + money(d.fee.volumeUsd) + " traded" +
+          '<span class="why">Paid in USDG to the treasury, which buys back and burns $HELM. ' + esc(d.tier.name) + " rate.</span></span>" +
+          '<span class="val">' + money(d.fee.usd) + "</span>" +
+          '<span class="st" id="stfee">Waiting</span></div>';
+      }
+      $("trades").innerHTML = html;
+      var steps = d.trades.length + (d.fee ? 1 : 0);
+      $("run-btn").textContent = "Approve and run " + steps + " step" + (steps > 1 ? "s" : "");
       $("run-row").hidden = false; $("plan-fine").hidden = false;
     }).catch(function (e) {
       $("plan-err").textContent = e.message; $("plan-err").hidden = false;
@@ -444,6 +665,7 @@ th.r, td.r { text-align: right; }
   function call(to, data) { return eth.request({ method: "eth_call", params: [{ to: to, data: data }, "latest"] }); }
   function balanceOf(token, owner) { return call(token, "0x70a08231" + pad32(owner)).then(function (r) { return BigInt(r && r !== "0x" ? r : "0x0"); }); }
   function allowance(token, owner, spender) { return call(token, "0xdd62ed3e" + pad32(owner) + pad32(spender)).then(function (r) { return BigInt(r && r !== "0x" ? r : "0x0"); }); }
+  function assetBy(sym) { return CFG.assets.filter(function (a) { return a.symbol === sym; })[0]; }
 
   function waitReceipt(hash) {
     var started = Date.now();
@@ -459,10 +681,20 @@ th.r, td.r { text-align: right; }
   }
   function txLink(hash, text) { return '<a href="' + CFG.explorer + "/tx/" + hash + '" target="_blank" rel="noopener">' + text + "</a>"; }
 
+  function runFee(fee) {
+    var st = $("stfee"), row = $("tfee");
+    var usdg = assetBy("USDG");
+    st.textContent = "Confirm the fee in your wallet…";
+    var data = "0xa9059cbb" + pad32(fee.to) + pad32(BigInt(fee.amountRaw).toString(16));
+    return eth.request({ method: "eth_sendTransaction", params: [{ from: account, to: usdg.address, data: data }] }).then(function (h) {
+      st.innerHTML = "Paying… " + txLink(h, "view");
+      return waitReceipt(h).then(function () { row.classList.add("done"); st.innerHTML = "Paid · " + txLink(h, "view transaction"); });
+    }).catch(function (e) { row.classList.add("fail"); st.textContent = walletError(e); throw e; });
+  }
+
   function runTrade(t, i) {
     var st = $("st" + i), row = $("t" + i);
-    var byS = {}; CFG.assets.forEach(function (a) { byS[a.symbol] = a; });
-    var fromToken = byS[t.from];
+    var fromToken = assetBy(t.from);
     // Spend what the wallet actually has, never more than planned.
     return balanceOf(fromToken.address, account).then(function (bal) {
       var amount = BigInt(t.amountRaw);
@@ -502,17 +734,24 @@ th.r, td.r { text-align: right; }
   function runAll() {
     if (!lastPlan || running) return;
     running = true;
+    var p = lastPlan;
     $("run-btn").disabled = true; $("plan-btn").disabled = true; $("plan-err").hidden = true;
     ensureChain().then(function () {
+      // Pay the fee first when the wallet already has the USDG for it, otherwise last.
+      return p.fee ? balanceOf(assetBy("USDG").address, account) : 0n;
+    }).then(function (usdgNow) {
+      var feeFirst = p.fee && usdgNow >= BigInt(p.fee.amountRaw);
       var chainP = Promise.resolve();
-      lastPlan.trades.forEach(function (t, i) { chainP = chainP.then(function () { return runTrade(t, i); }); });
+      if (feeFirst) chainP = chainP.then(function () { return runFee(p.fee); });
+      p.trades.forEach(function (t, i) { chainP = chainP.then(function () { return runTrade(t, i); }); });
+      if (p.fee && !feeFirst) chainP = chainP.then(function () { return runFee(p.fee); });
       return chainP;
     }).then(function () {
       toast("Rebalance complete");
       $("run-row").hidden = true;
       $("plan-title").textContent = "Back on course";
     }).catch(function (e) {
-      $("plan-err").textContent = "Stopped: " + walletError(e) + " Trades that finished are kept. Plan again to continue from where you are.";
+      $("plan-err").textContent = "Stopped: " + walletError(e) + " Steps that finished are kept. Plan again to continue from where you are.";
       $("plan-err").hidden = false;
     }).then(function () {
       running = false;
@@ -521,26 +760,32 @@ th.r, td.r { text-align: right; }
     });
   }
 
+  // ===== Burns =====
+  function loadBurns() {
+    getJSON("/api/burns").then(function (d) {
+      if (d._status !== 200) throw new Error();
+      $("burn-total").textContent = num(d.totalBurned);
+      $("burn-pct").textContent = d.pctOfSupply.toFixed(3) + "%";
+      $("burn-count").textContent = d.count;
+      $("burn-list").innerHTML = d.burns.slice(0, 8).map(function (b) {
+        var when = b.time ? new Date(b.time).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Block " + b.block;
+        return '<div class="burn-row"><span class="amt">' + num(b.amount) + ' $HELM</span><span class="muted">' + esc(when) + "</span>" + txLink(b.tx, "View burn") + "</div>";
+      }).join("") || '<p class="muted" style="margin:0">No burns yet.</p>';
+    }).catch(function () { $("burn-total").textContent = "–"; $("burn-pct").textContent = "–"; $("burn-count").textContent = "–"; });
+  }
+
   // ===== Wire up =====
   $("connect-btn").addEventListener("click", connect);
   $("wallet-btn").addEventListener("click", function () { if (!account) connect(); else { navigator.clipboard && navigator.clipboard.writeText(account).then(function () { toast("Address copied"); }, function () {}); } });
-  $("gate-recheck").addEventListener("click", load);
   $("refresh-btn").addEventListener("click", load);
   $("plan-btn").addEventListener("click", plan);
   $("run-btn").addEventListener("click", runAll);
-  document.querySelectorAll(".seg button").forEach(function (b) {
-    b.addEventListener("click", function () {
-      if (running) return;
-      course = b.getAttribute("data-course");
-      if (account) store("helm_course_" + account.toLowerCase(), course);
-      renderCourse(); resetPlan(); load();
-    });
-  });
 
   getJSON("/api/config").then(function (cfg) {
     CFG = cfg;
-    $("buy-link").href = cfg.buyUrl; $("gate-buy").href = cfg.buyUrl;
-    renderCourse();
+    $("buy-link").href = cfg.buyUrl; $("tier-buy").href = cfg.buyUrl;
+    if (!cfg.feesOn) $("burn-explain").textContent = "Rebalance fees will fund automatic buybacks. Every $HELM burn so far is listed here with its transaction.";
+    loadBurns();
     if (!eth) return;
     eth.on && eth.on("accountsChanged", function (a) { resetPlan(); setAccount(a && a[0]); });
     eth.on && eth.on("chainChanged", function () { load(); });

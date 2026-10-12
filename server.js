@@ -1,12 +1,14 @@
 // Helm server: landing page, the Helm app, and its API.
 //
 // Env vars:
-//   HELM_CA        $HELM contract address. Buy buttons and the holder check use it.
-//   MONGO_URI      MongoDB connection string for waitlist signups.
-//   RPC_URL        Robinhood Chain RPC (defaults to the public one).
-//   LIFI_API_KEY   optional, raises LiFi rate limits.
-//   DEEPSEEK_API_KEY optional, adds an AI-written note to each rebalance plan.
-//   PORT           set by Railway.
+//   HELM_CA              $HELM contract address. Tiers, Buy buttons and the burn tracker use it.
+//   MONGO_URI            MongoDB connection string (waitlist, custom courses).
+//   BUYBACK_PRIVATE_KEY  key of a fresh treasury wallet. Turns on rebalance fees (paid to it)
+//                        and the bot that spends them buying and burning $HELM.
+//   DEEPSEEK_API_KEY     optional, adds an AI-written note to each rebalance plan.
+//   RPC_URL              optional, Robinhood Chain RPC (defaults to the public one).
+//   LIFI_API_KEY         optional, raises LiFi rate limits.
+//   PORT                 set by Railway.
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -15,16 +17,16 @@ const assets = require("./lib/assets");
 const { buildPlan } = require("./lib/plan");
 const store = require("./lib/store");
 const ai = require("./lib/ai");
+const tiers = require("./lib/tiers");
+const courses = require("./lib/courses");
+const burns = require("./lib/burns");
+const buyback = require("./lib/buyback");
 
 const ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
 const env = (k) => (process.env[k] || "").trim();
 const HELM_CA = ADDR_RE.test(env("HELM_CA")) ? env("HELM_CA") : "";
-const HELM_MIN = 100_000; // $HELM a wallet must hold to use the agent
-// Holders get in first. From this moment the app is open to everyone.
-// 05:30 GMT+1 on Oct 12 2026. Override with PUBLIC_AT (any ISO date) if needed.
-const PUBLIC_AT = Date.parse(env("PUBLIC_AT") || "2026-10-12T04:30:00Z");
-const isPublic = () => Number.isFinite(PUBLIC_AT) && Date.now() >= PUBLIC_AT;
 const LIFI_API_KEY = env("LIFI_API_KEY");
+const TREASURY = buyback.treasury(); // fees go here; empty means fees are off
 
 const PUBLIC = path.join(__dirname, "public");
 const landing = fs
@@ -46,7 +48,7 @@ function send(res, status, body, headers = {}) {
   res.end(isJson ? JSON.stringify(body) : body);
 }
 
-function readBody(req, limit = 4096) {
+function readBody(req, limit = 8192) {
   return new Promise((resolve, reject) => {
     let data = "";
     req.on("data", (c) => {
@@ -80,7 +82,7 @@ setInterval(() => {
   for (const [k, v] of hits) if (now > v.reset) hits.delete(k);
 }, 60_000).unref();
 
-// Wallet snapshot: balances of every managed asset plus $HELM, ETH for gas, and live prices.
+// Wallet snapshot: balances of every managed asset plus $HELM, ETH for gas, live prices and tier.
 async function snapshot(address) {
   const tokenAddrs = assets.MANAGED.map((a) => a.address).concat(HELM_CA ? [HELM_CA] : []);
   const [bal, prices] = await Promise.all([chain.getBalances(address, tokenAddrs), assets.getPrices()]);
@@ -88,12 +90,34 @@ async function snapshot(address) {
   for (const a of assets.MANAGED) balances[a.symbol] = bal.tokens[a.address];
   const helmRaw = HELM_CA ? bal.tokens[HELM_CA] : 0n;
   const helm = Number(helmRaw / 10n ** 12n) / 1e6;
+  return { balances, prices, ethRaw: bal.eth, helm, tier: tiers.tierFor(helm), next: tiers.nextTier(helm) };
+}
+
+// Resolve a course key for a wallet's tier. Returns { course } or { error, status }.
+async function resolveCourse(address, key, tier) {
+  if (assets.COURSES[key]) {
+    if (!tier.courses.includes(key)) {
+      const unlock = tiers.TIERS.slice().reverse().find((t) => t.courses.includes(key));
+      return { status: 403, error: `${assets.COURSES[key].name} unlocks at ${unlock.min.toLocaleString()} $HELM.` };
+    }
+    return { course: { key, ...assets.COURSES[key] } };
+  }
+  const m = /^custom-(\d)$/.exec(key || "");
+  if (m) {
+    const slot = Number(m[1]);
+    if (slot >= tier.custom) return { status: 403, error: "Custom courses unlock at 100,000 $HELM." };
+    const c = await courses.getCourse(address, slot);
+    if (!c) return { status: 404, error: "That custom course doesn't exist anymore." };
+    return { course: { key, name: c.name, weights: c.weights, desc: "Your own course.", rebalance: "when it drifts" } };
+  }
+  return { status: 400, error: "Unknown course." };
+}
+
+function tierInfo(snap) {
   return {
-    balances,
-    prices,
-    ethRaw: bal.eth,
-    helm,
-    holder: (Boolean(HELM_CA) && helm >= HELM_MIN) || isPublic(),
+    helm: snap.helm,
+    tier: { key: snap.tier.key, name: snap.tier.name, driftBand: snap.tier.driftBand, feeBps: TREASURY ? snap.tier.feeBps : 0, courses: snap.tier.courses, custom: snap.tier.custom },
+    next: snap.next ? { name: snap.next.name, min: snap.next.min } : null,
   };
 }
 
@@ -106,16 +130,21 @@ async function api(req, res, url) {
       rpcUrl: "https://rpc.mainnet.chain.robinhood.com",
       explorer: "https://robinhoodchain.blockscout.com",
       helmCa: HELM_CA,
-      helmMin: HELM_MIN,
-      publicAt: Number.isFinite(PUBLIC_AT) ? new Date(PUBLIC_AT).toISOString() : null,
-      isPublic: isPublic(),
       buyUrl: HELM_CA ? `https://ponsfamily.com/launchpad/${HELM_CA}` : "https://ponsfamily.com/launchpad",
+      treasury: TREASURY,
+      feesOn: Boolean(TREASURY),
+      tiers: tiers.publicTiers().map((t) => ({ ...t, feeBps: TREASURY ? t.feeBps : 0 })),
       courses: assets.COURSES,
+      maxSingleStock: courses.MAX_SINGLE_STOCK,
       assets: assets.MANAGED.map(({ symbol, name, address, decimals, kind }) => ({ symbol, name, address, decimals, kind })),
     });
   }
 
   if (rateLimited(req)) return send(res, 429, { error: "Too many requests. Wait a minute and try again." });
+
+  if (p === "/api/burns") {
+    return send(res, 200, await burns.getBurns(HELM_CA));
+  }
 
   if (p === "/api/waitlist" && req.method === "POST") {
     let body;
@@ -134,30 +163,78 @@ async function api(req, res, url) {
     return send(res, r.error ? 400 : 200, r);
   }
 
+  if (p === "/api/courses" && req.method === "GET") {
+    const address = url.searchParams.get("address") || "";
+    if (!ADDR_RE.test(address)) return send(res, 400, { error: "Connect a wallet first." });
+    let list = [];
+    try {
+      list = await courses.listCourses(address);
+    } catch (err) {
+      console.error("Courses read failed:", err.message);
+    }
+    return send(res, 200, { courses: list });
+  }
+
+  if (p === "/api/courses" && req.method === "POST") {
+    let body;
+    try {
+      body = JSON.parse(await readBody(req));
+    } catch {
+      return send(res, 400, { error: "Invalid request." });
+    }
+    const address = String(body.address || "");
+    if (!ADDR_RE.test(address)) return send(res, 400, { error: "Connect a wallet first." });
+    const sigErr = await courses.checkSignature(body);
+    if (sigErr) return send(res, 401, { error: sigErr });
+    const snap = await snapshot(address);
+    const slot = Number(body.slot);
+    if (!Number.isInteger(slot) || slot < 0 || slot >= snap.tier.custom) {
+      return send(res, 403, { error: snap.tier.custom ? `Your tier can save ${snap.tier.custom} custom course${snap.tier.custom > 1 ? "s" : ""}.` : "Custom courses unlock at 100,000 $HELM." });
+    }
+    try {
+      if (body.action === "delete") {
+        await courses.deleteCourse(address, slot);
+        return send(res, 200, { ok: true });
+      }
+      const v = courses.validateCourse(body);
+      if (v.error) return send(res, 400, v);
+      await courses.saveCourse(address, slot, v);
+      return send(res, 200, { ok: true, course: { id: `custom-${slot}`, slot, ...v } });
+    } catch (err) {
+      console.error("Course save failed:", err.message);
+      return send(res, 503, { error: "Couldn't save your course right now. Try again in a minute." });
+    }
+  }
+
   if (p === "/api/portfolio" || p === "/api/plan") {
     const address = url.searchParams.get("address") || "";
     if (!ADDR_RE.test(address)) return send(res, 400, { error: "Connect a wallet first." });
-    const courseKey = url.searchParams.get("course") || "steady";
-    const course = assets.COURSES[courseKey];
-    if (!course) return send(res, 400, { error: "Unknown course." });
     const snap = await snapshot(address);
+    const r = await resolveCourse(address, url.searchParams.get("course") || "steady", snap.tier);
+    if (r.error) return send(res, r.status, { ...tierInfo(snap), error: r.error });
+    const course = r.course;
+    const plan = buildPlan({
+      assets: assets.MANAGED,
+      balances: snap.balances,
+      prices: snap.prices,
+      weights: course.weights,
+      options: { driftBand: snap.tier.driftBand, feeBps: TREASURY ? snap.tier.feeBps : 0 },
+    });
     const out = {
       address,
-      helm: snap.helm,
-      helmMin: HELM_MIN,
-      holder: snap.holder,
+      ...tierInfo(snap),
       ethForGas: Number(snap.ethRaw / 10n ** 12n) / 1e6,
-      course: courseKey,
+      course: course.key,
+      courseName: course.name,
+      totalUsd: plan.totalUsd,
+      holdings: plan.holdings,
+      maxDrift: plan.maxDrift,
+      onCourse: plan.onCourse,
+      message: plan.message,
     };
-    const plan = buildPlan({ assets: assets.MANAGED, balances: snap.balances, prices: snap.prices, weights: course.weights });
-    out.totalUsd = plan.totalUsd;
-    out.holdings = plan.holdings;
-    out.maxDrift = plan.maxDrift;
-    out.onCourse = plan.onCourse;
-    out.message = plan.message;
     if (p === "/api/plan") {
-      if (!snap.holder) return send(res, 403, { ...out, error: `Holders of ${HELM_MIN.toLocaleString()} $HELM get in first. Everyone else gets in soon.` });
       out.trades = plan.trades;
+      out.fee = plan.fee ? { ...plan.fee, to: TREASURY } : null;
       out.note = await ai.explainPlan({ courseName: course.name, totalUsd: plan.totalUsd, holdings: plan.holdings, trades: plan.trades });
     }
     return send(res, 200, out);
@@ -174,7 +251,6 @@ async function api(req, res, url) {
     if (!/^[1-9][0-9]{0,40}$/.test(amount)) return send(res, 400, { error: "Invalid amount." });
 
     const snap = await snapshot(address);
-    if (!snap.holder) return send(res, 403, { error: `Holders of ${HELM_MIN.toLocaleString()} $HELM get in first. Everyone else gets in soon.` });
     if (BigInt(amount) > (snap.balances[from.symbol] || 0n)) return send(res, 400, { error: `Not enough ${from.symbol} in your wallet for this trade.` });
 
     const q = new URLSearchParams({
@@ -242,12 +318,13 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(process.env.PORT || 3000, () => {
+  const bot = buyback.start(HELM_CA, () => {});
   console.log(
     `Helm on port ${process.env.PORT || 3000}` +
       ` | CA ${HELM_CA || "not set"}` +
-      ` | holder min ${HELM_MIN}` +
-      ` | open to everyone ${isPublic() ? "now" : "at " + new Date(PUBLIC_AT).toISOString()}` +
+      ` | fees ${TREASURY ? "on, treasury " + TREASURY : "off (set BUYBACK_PRIVATE_KEY)"}` +
+      ` | buyback bot ${bot ? "on" : "off"}` +
       ` | AI notes ${ai.enabled() ? "on" : "off"}` +
-      ` | waitlist ${store.configured() ? "MongoDB" : "NOT SAVING, set MONGO_URI"}`
+      ` | MongoDB ${store.configured() ? "on" : "NOT SET (MONGO_URI)"}`
   );
 });
