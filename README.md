@@ -13,7 +13,7 @@ AI portfolio agent for tokenized stocks on Robinhood Chain. Live at https://helm
 4. `/api/quote` gets a LiFi route for one trade. Only USDG to stock (or back) on the allowlist is allowed.
 5. The browser approves the exact amount and sends the swap from the user's wallet.
 
-Only holders of `HELM_MIN` $HELM can plan or quote.
+Only wallets holding 100,000 $HELM or more can plan or quote.
 
 Stock token addresses come from Robinhood's official assets API. USDG is `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` ("Global Dollar"). A token named "Paxos USDG" with a tiny supply also exists on the chain and is not used.
 
@@ -26,20 +26,19 @@ Variables:
 | Name | What it does |
 |---|---|
 | `HELM_CA` | $HELM contract address. Shows the CA, powers Buy buttons and the holder check. |
-| `HELM_MIN` | $HELM needed to use the app, in whole tokens. Default 1. |
-| `DATA_DIR` | Where waitlist signups are saved. Attach a Railway volume (for example at `/data`) and set this to `/data`, or signups are lost on redeploy. |
-| `ADMIN_KEY` | Download signups at `/api/admin/waitlist.csv?key=YOUR_KEY`. |
+| `MONGO_URI` | MongoDB connection string. Waitlist signups go to the `waitlist` collection (database from the URI, or `helm`). |
 | `DEEPSEEK_API_KEY` | Optional. Adds a short AI-written note to each rebalance plan. |
-| `DEEPSEEK_MODEL` | Optional. Default `deepseek-chat`. |
 | `RPC_URL` | Optional. A faster Robinhood Chain RPC than the public one. |
 | `LIFI_API_KEY` | Optional. Raises LiFi rate limits. |
-| `WAITLIST_URL` | Optional. Send signups to a Google Apps Script instead of this server. |
+
+The app requires holding 100,000 $HELM (set in `server.js`).
 
 ## Develop
 
 ```
 npm test
-PORT=3000 HELM_CA=0x... HELM_MIN=0 npm start
+npm install
+PORT=3000 HELM_CA=0x... MONGO_URI=mongodb://... npm start
 ```
 
-No dependencies. Node 20+.
+One dependency (the MongoDB driver). Node 20+.

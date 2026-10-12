@@ -7,5 +7,10 @@
     "start": "node server.js",
     "test": "node --test test/*.test.js"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "mongodb": "6.21.0"
+  }
 }

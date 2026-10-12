@@ -1,11 +1,8 @@
-// Helm server: landing page, the Helm app, and its API. No dependencies.
+// Helm server: landing page, the Helm app, and its API.
 //
 // Env vars:
 //   HELM_CA        $HELM contract address. Buy buttons and the holder check use it.
-//   HELM_MIN       $HELM a wallet must hold to use the app (whole tokens, default 1).
-//   WAITLIST_URL   optional Google Apps Script URL. If unset, signups are saved on this server.
-//   DATA_DIR       where signups are stored. Point it at a Railway volume.
-//   ADMIN_KEY      lets you download signups at /api/admin/waitlist.csv?key=...
+//   MONGO_URI      MongoDB connection string for waitlist signups.
 //   RPC_URL        Robinhood Chain RPC (defaults to the public one).
 //   LIFI_API_KEY   optional, raises LiFi rate limits.
 //   DEEPSEEK_API_KEY optional, adds an AI-written note to each rebalance plan.
@@ -22,16 +19,14 @@ const ai = require("./lib/ai");
 const ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
 const env = (k) => (process.env[k] || "").trim();
 const HELM_CA = ADDR_RE.test(env("HELM_CA")) ? env("HELM_CA") : "";
-const HELM_MIN = Number(env("HELM_MIN") || "1");
-const WAITLIST_URL = /^https:\/\/\S+$/.test(env("WAITLIST_URL")) ? env("WAITLIST_URL") : "";
-const ADMIN_KEY = env("ADMIN_KEY");
+const HELM_MIN = 100_000; // $HELM a wallet must hold to use the agent
 const LIFI_API_KEY = env("LIFI_API_KEY");
 
 const PUBLIC = path.join(__dirname, "public");
 const landing = fs
   .readFileSync(path.join(PUBLIC, "index.html"), "utf8")
   .replace("__HELM_CA__", HELM_CA)
-  .replace("__WAITLIST_URL__", WAITLIST_URL ? JSON.stringify(WAITLIST_URL).slice(1, -1) : "");
+  .replace("__WAITLIST_URL__", "");
 const appPage = fs.readFileSync(path.join(PUBLIC, "app.html"), "utf8");
 
 const STATIC = { ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
@@ -123,13 +118,14 @@ async function api(req, res, url) {
     } catch {
       return send(res, 400, { error: "Invalid request." });
     }
-    const r = store.addSignup(body);
+    let r;
+    try {
+      r = await store.addSignup(body || {});
+    } catch (err) {
+      console.error("Waitlist save failed:", err.message);
+      return send(res, 503, { error: "We couldn't save your spot right now. Try again in a minute." });
+    }
     return send(res, r.error ? 400 : 200, r);
-  }
-
-  if (p === "/api/admin/waitlist.csv") {
-    if (!ADMIN_KEY || url.searchParams.get("key") !== ADMIN_KEY) return send(res, 403, { error: "Forbidden" });
-    return send(res, 200, store.toCsv(), { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="helm-waitlist.csv"' });
   }
 
   if (p === "/api/portfolio" || p === "/api/plan") {
@@ -245,6 +241,6 @@ server.listen(process.env.PORT || 3000, () => {
       ` | CA ${HELM_CA || "not set"}` +
       ` | holder min ${HELM_MIN}` +
       ` | AI notes ${ai.enabled() ? "on" : "off"}` +
-      ` | waitlist ${WAITLIST_URL ? "Google Sheet" : "saved to " + store.DATA_DIR + " (" + store.count() + " signups)"}`
+      ` | waitlist ${store.configured() ? "MongoDB" : "NOT SAVING, set MONGO_URI"}`
   );
 });
