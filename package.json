@@ -1,7 +1,11 @@
 {
-  "name": "helm-site",
+  "name": "helm",
   "version": "1.0.0",
   "private": true,
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=18" }
+  "description": "Helm: landing page, waitlist and portfolio rebalancing app for tokenized stocks on Robinhood Chain",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=20" }
 }

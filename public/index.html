@@ -205,8 +205,9 @@ footer { background: var(--blue); color: var(--paper); padding-block: 56px; }
         <a href="#how">How it works</a>
         <a href="#token">$HELM</a>
         <a href="#faq">FAQ</a>
+        <a href="#waitlist">Waitlist</a>
         <a class="btn btn-ghost btn-sm js-buy" href="https://ponsfamily.com/launchpad" target="_blank" rel="noopener">Buy $HELM</a>
-        <a class="btn btn-white btn-sm" href="#waitlist">Join waitlist</a>
+        <a class="btn btn-white btn-sm" href="/app">Open app</a>
       </div>
     </nav>
 
@@ -215,7 +216,7 @@ footer { background: var(--blue); color: var(--paper); padding-block: 56px; }
         <h1>Your stocks,<br><span>on autopilot.</span></h1>
         <p class="lede">Pick how much risk you want. Helm's AI agent builds a portfolio of tokenized stocks and keeps it on course, right in your own wallet.</p>
         <div class="hero-cta">
-          <a class="btn btn-white" href="#waitlist">Get early access</a>
+          <a class="btn btn-white" href="/app">Open the app</a>
           <a class="btn btn-ghost js-buy" href="https://ponsfamily.com/launchpad" target="_blank" rel="noopener">Buy $HELM</a>
         </div>
       </div>
@@ -533,12 +534,13 @@ footer { background: var(--blue); color: var(--paper); padding-block: 56px; }
 
     var send = CONFIG.endpoint
       ? fetch(CONFIG.endpoint, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(entry) })
-      : Promise.resolve();
+      : fetch("/api/waitlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) })
+          .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw new Error(d.error || "save failed"); return d; }); });
     send.then(function () {
       store("helm_entry", JSON.stringify(entry));
       showDone(entry);
-    }).catch(function () {
-      document.getElementById("err-wallet").textContent = "We couldn't save your spot. Check your connection and try again.";
+    }).catch(function (err) {
+      document.getElementById("err-wallet").textContent = err && err.message && err.message !== "Failed to fetch" && err.message !== "save failed" ? err.message : "We couldn't save your spot. Check your connection and try again.";
     }).then(function () { btn.disabled = false; btn.textContent = "Join the waitlist"; });
   });
 

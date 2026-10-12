@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Helm App</title>
+<meta name="description" content="Pick a course and let Helm rebalance your tokenized stock portfolio on Robinhood Chain.">
+<meta name="theme-color" content="#2B4BFF">
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: blue top bar, then one working column: summary, course, holdings, plan. Same brand as the landing page. */
+:root {
+  --blue: #2B4BFF;
+  --blue-deep: #1A34D6;
+  --tint: #A9B8FF;
+  --wash: #EEF1FF;
+  --ink: #0B1033;
+  --muted: #5A6286;
+  --line: #E3E7F5;
+  --paper: #FFFFFF;
+  --bg: #F6F7FC;
+  --up: #0E9F5B;
+  --warn: #B86E00;
+  --down: #D12C2C;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+button { font-family: inherit; }
+:focus-visible { outline: 3px solid var(--tint); outline-offset: 2px; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.top { background: var(--blue); color: var(--paper); padding-top: env(safe-area-inset-top, 0px); }
+.top-in { max-width: 1040px; margin: 0 auto; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 24px; letter-spacing: -0.05em; text-decoration: none; }
+.brand svg { width: 30px; height: 30px; }
+.brand small { font-size: 13px; font-weight: 600; letter-spacing: 0; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.16); }
+.top-actions { display: flex; gap: 10px; align-items: center; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 999px; border: 0; font: 600 15px/1 var(--font); text-decoration: none; cursor: pointer; white-space: nowrap; transition: background .15s ease, opacity .15s ease; }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn-white { background: var(--paper); color: var(--blue); }
+.btn-white:hover { background: var(--wash); }
+.btn-ghost { background: transparent; color: var(--paper); box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); }
+.btn-blue { background: var(--blue); color: var(--paper); }
+.btn-blue:hover:not([disabled]) { background: var(--blue-deep); }
+.btn-soft { background: var(--wash); color: var(--blue); }
+.btn-lg { height: 54px; padding: 0 26px; font-size: 16px; }
+@media (max-width: 560px) { .hide-sm { display: none; } }
+
+main { max-width: 1040px; margin: 0 auto; padding: 28px 20px calc(64px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 20px; }
+@media (max-width: 480px) { main { padding-inline: 16px; } .top-in { padding-inline: 16px; } }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 24px; padding: 24px; min-width: 0; }
+@media (max-width: 480px) { .card { padding: 18px; border-radius: 20px; } }
+h1, h2, h3 { margin: 0; letter-spacing: -0.03em; line-height: 1.1; text-wrap: balance; }
+.muted { color: var(--muted); }
+.label { font-size: 13px; font-weight: 600; color: var(--muted); }
+
+/* Empty states */
+.hero-card { text-align: left; display: grid; gap: 14px; padding: 36px; }
+.hero-card h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 800; letter-spacing: -0.045em; }
+.hero-card p { margin: 0; color: var(--muted); font-size: 17px; max-width: 34em; }
+.hero-card .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.addr-box { font: 500 14px var(--mono); background: var(--wash); border-radius: 12px; padding: 10px 14px; overflow-wrap: anywhere; }
+
+/* Summary */
+.summary { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 16px; align-items: stretch; }
+@media (max-width: 760px) { .summary { grid-template-columns: 1fr 1fr; } .summary .total { grid-column: 1 / -1; } }
+.stat { display: grid; gap: 6px; align-content: start; }
+.stat .big { font-size: clamp(32px, 5vw, 44px); font-weight: 800; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
+.stat .mid { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.pill { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; width: fit-content; }
+.pill.ok { background: #E3F6EC; color: var(--up); }
+.pill.off { background: #FFF2DE; color: var(--warn); }
+.pill.na { background: var(--wash); color: var(--muted); }
+.gas-warn { margin-top: 4px; font-size: 13px; color: var(--warn); }
+
+/* Course */
+.course-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--wash); padding: 4px; border-radius: 999px; margin-top: 16px; max-width: 520px; }
+.seg button { height: 42px; border: 0; border-radius: 999px; background: transparent; font: 600 15px/1 var(--font); color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--blue); color: var(--paper); }
+.course-desc { margin: 12px 0 0; color: var(--muted); }
+
+/* Holdings */
+.table-wrap { overflow-x: auto; margin-top: 14px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 560px; }
+th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 14px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+th.r, td.r { text-align: right; }
+.sym { font-weight: 700; }
+.sym small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.wbar { position: relative; height: 8px; border-radius: 999px; background: var(--wash); min-width: 120px; }
+.wbar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--blue); }
+.wbar b { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); border-radius: 2px; }
+.wtext { font-size: 12px; color: var(--muted); margin-top: 6px; white-space: nowrap; }
+.drift-up { color: var(--warn); font-weight: 600; }
+.drift-ok { color: var(--muted); }
+
+/* Plan */
+.plan-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.note { margin-top: 16px; padding: 16px 18px; border-radius: 16px; background: var(--wash); color: var(--ink); }
+.note .label { color: var(--blue); display: block; margin-bottom: 4px; }
+.trades { display: grid; gap: 10px; margin-top: 16px; }
+.trade { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; }
+.trade .side { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em; }
+.side.sell { background: #FFF2DE; color: var(--warn); }
+.side.buy { background: #E3F6EC; color: var(--up); }
+.trade .what { font-weight: 600; min-width: 0; }
+.trade .why { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+.trade .val { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.trade .st { grid-column: 2 / -1; font-size: 13px; color: var(--muted); }
+.trade .st a { color: var(--blue); }
+.trade.done { border-color: #BFE8D2; }
+.trade.fail { border-color: #F3C1C1; }
+.trade.fail .st { color: var(--down); }
+@media (max-width: 520px) { .trade { grid-template-columns: 1fr auto; } .trade .side { grid-column: 1 / -1; width: fit-content; } .trade .st { grid-column: 1 / -1; } }
+.run-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 18px; }
+.fine { font-size: 13px; color: var(--muted); margin: 14px 0 0; }
+
+.err { color: var(--down); font-size: 14px; margin: 10px 0 0; }
+.skeleton { color: var(--muted); }
+
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); background: var(--ink); color: var(--paper); padding: 12px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; max-width: calc(100% - 32px); text-align: center; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.foot { font-size: 12px; color: var(--muted); max-width: 70ch; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mark" viewBox="0 0 400 400">
+    <g transform="rotate(-15 200 200)" stroke-linecap="round">
+      <line x1="200" y1="200" x2="200" y2="71.4" stroke="#A9B8FF" stroke-width="23"/><circle cx="200" cy="71.4" r="24" fill="#A9B8FF"/>
+      <circle cx="200" cy="200" r="96" fill="none" stroke="currentColor" stroke-width="28.8"/>
+      <line x1="200" y1="200" x2="311.4" y2="135.7" stroke="currentColor" stroke-width="23"/><circle cx="311.4" cy="135.7" r="24" fill="currentColor"/>
+      <line x1="200" y1="200" x2="311.4" y2="264.3" stroke="currentColor" stroke-width="23"/><circle cx="311.4" cy="264.3" r="24" fill="currentColor"/>
+      <line x1="200" y1="200" x2="200" y2="328.6" stroke="currentColor" stroke-width="23"/><circle cx="200" cy="328.6" r="24" fill="currentColor"/>
+      <line x1="200" y1="200" x2="88.6" y2="264.3" stroke="currentColor" stroke-width="23"/><circle cx="88.6" cy="264.3" r="24" fill="currentColor"/>
+      <line x1="200" y1="200" x2="88.6" y2="135.7" stroke="currentColor" stroke-width="23"/><circle cx="88.6" cy="135.7" r="24" fill="currentColor"/>
+      <circle cx="200" cy="200" r="34.6" fill="currentColor"/>
+    </g>
+  </symbol>
+</svg>
+
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="/" aria-label="Helm home"><svg aria-hidden="true"><use href="#mark"/></svg>helm <small>App</small></a>
+    <div class="top-actions">
+      <a class="btn btn-ghost hide-sm" id="buy-link" href="https://ponsfamily.com/launchpad" target="_blank" rel="noopener">Buy $HELM</a>
+      <button class="btn btn-white" id="wallet-btn" type="button">Connect wallet</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Not connected -->
+  <section class="card hero-card" id="s-connect">
+    <h1>Set your course.</h1>
+    <p>Connect your wallet on Robinhood Chain. Helm reads your stock tokens and USDG, then plans the trades that keep your portfolio on target. You approve every trade.</p>
+    <div class="row">
+      <button class="btn btn-blue btn-lg" id="connect-btn" type="button">Connect wallet</button>
+      <a class="btn btn-soft btn-lg" href="/#how">How it works</a>
+    </div>
+    <p class="err" id="connect-err" hidden></p>
+  </section>
+
+  <!-- Connected but not a holder -->
+  <section class="card hero-card" id="s-gate" hidden>
+    <h1>Holders only, for now.</h1>
+    <p id="gate-text">Hold $HELM to use the agent.</p>
+    <div class="row">
+      <a class="btn btn-blue btn-lg" id="gate-buy" href="https://ponsfamily.com/launchpad" target="_blank" rel="noopener">Buy $HELM on Pons</a>
+      <button class="btn btn-soft btn-lg" id="gate-recheck" type="button">I bought, check again</button>
+    </div>
+  </section>
+
+  <!-- Dashboard -->
+  <div id="s-dash" hidden style="display:grid;gap:20px">
+    <section class="card summary" aria-label="Portfolio summary">
+      <div class="stat total">
+        <span class="label">Portfolio value</span>
+        <span class="big" id="total">$0.00</span>
+        <span class="pill na" id="status-pill">Checking…</span>
+      </div>
+      <div class="stat">
+        <span class="label">Largest drift</span>
+        <span class="mid" id="drift">0%</span>
+        <span class="muted" style="font-size:13px">Helm acts past 3 points</span>
+      </div>
+      <div class="stat">
+        <span class="label">$HELM held</span>
+        <span class="mid" id="helm-held">0</span>
+        <span class="muted" style="font-size:13px" id="gas">ETH for gas: 0</span>
+        <span class="gas-warn" id="gas-warn" hidden>Add a little ETH to pay for gas.</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="course-head">
+        <div>
+          <span class="label">Your course</span>
+          <h2 style="font-size:26px;margin-top:4px" id="course-name">Steady</h2>
+        </div>
+        <span class="muted" id="course-rebal">Suggested check-in: every 2 weeks</span>
+      </div>
+      <div class="seg" role="group" aria-label="Course">
+        <button type="button" id="c-calm" data-course="calm" aria-pressed="false">Calm</button>
+        <button type="button" id="c-steady" data-course="steady" aria-pressed="true">Steady</button>
+        <button type="button" id="c-bold" data-course="bold" aria-pressed="false">Bold</button>
+      </div>
+      <p class="course-desc" id="course-desc"></p>
+    </section>
+
+    <section class="card">
+      <div class="plan-head">
+        <div><span class="label">Holdings</span><h2 style="font-size:22px;margin-top:4px">Where you are vs. where you're headed</h2></div>
+        <button class="btn btn-soft" id="refresh-btn" type="button">Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Asset</th><th class="r">Amount</th><th class="r">Value</th><th>Now vs. target</th><th class="r">Drift</th></tr></thead>
+          <tbody id="rows"><tr><td colspan="5" class="skeleton">Loading your wallet…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="plan-card">
+      <div class="plan-head">
+        <div><span class="label">Rebalance</span><h2 style="font-size:22px;margin-top:4px" id="plan-title">Plan your next move</h2></div>
+        <button class="btn btn-blue" id="plan-btn" type="button">Plan rebalance</button>
+      </div>
+      <p class="muted" id="plan-msg" style="margin:12px 0 0">Helm compares your wallet to your course and lists the trades to fix it.</p>
+      <div class="note" id="plan-note" hidden><span class="label">Helm's take</span><span id="plan-note-text"></span></div>
+      <div class="trades" id="trades"></div>
+      <div class="run-row" id="run-row" hidden>
+        <button class="btn btn-blue btn-lg" id="run-btn" type="button">Approve and run</button>
+        <span class="muted" id="run-hint">Your wallet asks you to confirm each step.</span>
+      </div>
+      <p class="fine" id="plan-fine" hidden>Swaps route through LiFi at up to 0.5% slippage. Sells run first so buys are paid from the proceeds. Helm never holds your funds and only ever trades USDG and the stock tokens on its list.</p>
+      <p class="err" id="plan-err" hidden></p>
+    </section>
+
+    <p class="foot">$HELM and tokenized stocks are subject to the same volatility as any other token or stock. You can lose some or all of what you put in. Stock tokens aren't available to US persons. Nothing here is financial advice.</p>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var CFG = null, account = null, course = "steady", lastPlan = null, running = false;
+  var eth = window.ethereum;
+
+  function toast(msg) {
+    var t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove("show"); }, 2600);
+  }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  function money(x) { return "$" + (x || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function pct(x) { return (x * 100).toFixed(1).replace(/\.0$/, "") + "%"; }
+  function short(a) { return a.slice(0, 6) + "…" + a.slice(-4); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function show(id) { ["s-connect", "s-gate", "s-dash"].forEach(function (s) { $(s).hidden = s !== id; }); }
+  function walletError(e) {
+    if (e && (e.code === 4001 || /reject|denied|cancel/i.test(e.message || ""))) return "You cancelled in your wallet.";
+    return (e && (e.shortMessage || e.message)) || "Something went wrong.";
+  }
+
+  function getJSON(url) {
+    return fetch(url).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) { d._status = r.status; return d; });
+    });
+  }
+
+  // ===== Wallet & chain =====
+  var CHAIN_HEX = "0x1237";
+  function ensureChain() {
+    return eth.request({ method: "eth_chainId" }).then(function (id) {
+      if (id === CHAIN_HEX) return;
+      return eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_HEX }] }).catch(function (e) {
+        if (e && (e.code === 4902 || /unrecognized|not added|unknown chain/i.test(e.message || ""))) {
+          return eth.request({ method: "wallet_addEthereumChain", params: [{
+            chainId: CHAIN_HEX, chainName: "Robinhood Chain",
+            nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+            rpcUrls: [CFG.rpcUrl], blockExplorerUrls: [CFG.explorer]
+          }] });
+        }
+        throw e;
+      });
+    });
+  }
+
+  function connect() {
+    $("connect-err").hidden = true;
+    if (!eth) {
+      $("connect-err").textContent = "No wallet found. Open helm.klin.lol/app in MetaMask, Rabby or Coinbase Wallet's browser, or install a wallet extension.";
+      $("connect-err").hidden = false;
+      return;
+    }
+    eth.request({ method: "eth_requestAccounts" }).then(function (accs) {
+      setAccount(accs && accs[0]);
+      return ensureChain();
+    }).catch(function (e) {
+      $("connect-err").textContent = walletError(e);
+      $("connect-err").hidden = false;
+    });
+  }
+
+  function setAccount(a) {
+    account = a ? a : null;
+    if (!account) { $("wallet-btn").textContent = "Connect wallet"; show("s-connect"); return; }
+    $("wallet-btn").textContent = short(account);
+    course = store("helm_course_" + account.toLowerCase()) || "steady";
+    renderCourse();
+    load();
+  }
+
+  // ===== Data =====
+  function load() {
+    if (!account) return;
+    $("rows").innerHTML = '<tr><td colspan="5" class="skeleton">Loading your wallet…</td></tr>';
+    return getJSON("/api/portfolio?address=" + account + "&course=" + course).then(function (d) {
+      if (d._status !== 200) throw new Error(d.error || "Couldn't load your wallet.");
+      if (!d.holder) {
+        show("s-gate");
+        $("gate-text").textContent = CFG.helmCa
+          ? "Hold at least " + d.helmMin.toLocaleString() + " $HELM to use the agent. This wallet holds " + d.helm.toLocaleString() + "."
+          : "The $HELM token isn't connected yet. Check back after launch.";
+        return;
+      }
+      show("s-dash");
+      renderPortfolio(d);
+    }).catch(function (e) {
+      show("s-dash");
+      $("rows").innerHTML = '<tr><td colspan="5" class="err">' + esc(e.message) + "</td></tr>";
+    });
+  }
+
+  function renderPortfolio(d) {
+    $("total").textContent = money(d.totalUsd);
+    $("drift").textContent = pct(d.maxDrift);
+    $("helm-held").textContent = Math.floor(d.helm).toLocaleString();
+    $("gas").textContent = "ETH for gas: " + d.ethForGas.toFixed(5);
+    $("gas-warn").hidden = d.ethForGas >= 0.0002;
+    var pill = $("status-pill");
+    if (d.totalUsd < 20) { pill.className = "pill na"; pill.textContent = "Add USDG to start"; }
+    else if (d.onCourse) { pill.className = "pill ok"; pill.textContent = "On course"; }
+    else { pill.className = "pill off"; pill.textContent = "Off course"; }
+
+    var names = {}; CFG.assets.forEach(function (a) { names[a.symbol] = a.name; });
+    var rows = d.holdings.slice().sort(function (a, b) { return b.target - a.target || b.valueUsd - a.valueUsd; });
+    $("rows").innerHTML = rows.map(function (h) {
+      var max = Math.max(h.weight, h.target, 0.01);
+      var scale = 100 / Math.max(0.5, max * 1.15);
+      var drift = h.weight - h.target;
+      var cls = Math.abs(drift) > 0.03 ? "drift-up" : "drift-ok";
+      return "<tr>" +
+        '<td><span class="sym">' + esc(h.symbol) + "<small>" + esc(names[h.symbol] || "") + "</small></span></td>" +
+        '<td class="r">' + esc(h.amount) + "</td>" +
+        '<td class="r">' + money(h.valueUsd) + "</td>" +
+        '<td><div class="wbar"><i style="width:' + Math.min(100, h.weight * scale).toFixed(1) + '%"></i><b style="left:' + Math.min(100, h.target * scale).toFixed(1) + '%"></b></div>' +
+        '<div class="wtext">' + pct(h.weight) + " now · " + pct(h.target) + " target</div></td>" +
+        '<td class="r ' + cls + '">' + (drift > 0 ? "+" : "") + (drift * 100).toFixed(1) + " pts</td></tr>";
+    }).join("") || '<tr><td colspan="5" class="skeleton">No Helm assets in this wallet yet. Add USDG to start.</td></tr>';
+  }
+
+  function renderCourse() {
+    var c = CFG.courses[course];
+    ["calm", "steady", "bold"].forEach(function (k) { $("c-" + k).setAttribute("aria-pressed", String(k === course)); });
+    $("course-name").textContent = c.name;
+    $("course-desc").textContent = c.desc + " Target: " + Object.keys(c.weights).map(function (s) { return s + " " + pct(c.weights[s]); }).join(", ") + ".";
+    $("course-rebal").textContent = "Suggested check-in: " + c.rebalance;
+  }
+
+  // ===== Plan =====
+  function resetPlan() {
+    lastPlan = null;
+    $("trades").innerHTML = ""; $("run-row").hidden = true; $("plan-fine").hidden = true;
+    $("plan-note").hidden = true; $("plan-err").hidden = true;
+    $("plan-title").textContent = "Plan your next move";
+    $("plan-msg").textContent = "Helm compares your wallet to your course and lists the trades to fix it.";
+  }
+
+  function plan() {
+    if (running) return;
+    resetPlan();
+    $("plan-btn").disabled = true; $("plan-btn").textContent = "Planning…";
+    getJSON("/api/plan?address=" + account + "&course=" + course).then(function (d) {
+      if (d._status !== 200) throw new Error(d.error || "Couldn't build a plan.");
+      renderPortfolio(d);
+      lastPlan = d;
+      $("plan-msg").textContent = d.message;
+      if (d.note) { $("plan-note-text").textContent = d.note; $("plan-note").hidden = false; }
+      if (!d.trades || !d.trades.length) { $("plan-title").textContent = d.onCourse ? "You're on course" : "Nothing to trade yet"; return; }
+      $("plan-title").textContent = d.trades.length + " trade" + (d.trades.length > 1 ? "s" : "") + " to get back on course";
+      $("plan-msg").textContent = "Review each trade, then approve. Sells run first.";
+      $("trades").innerHTML = d.trades.map(function (t, i) {
+        var what = t.side === "sell" ? "Sell " + t.amount + " " + t.from + " for USDG" : "Buy " + t.to + " with " + t.amount + " USDG";
+        return '<div class="trade" id="t' + i + '"><span class="side ' + t.side + '">' + t.side + "</span>" +
+          '<span class="what">' + esc(what) + '<span class="why">' + esc(t.reason) + "</span></span>" +
+          '<span class="val">' + money(t.valueUsd) + "</span>" +
+          '<span class="st" id="st' + i + '">Waiting</span></div>';
+      }).join("");
+      $("run-btn").textContent = "Approve and run " + d.trades.length + " trade" + (d.trades.length > 1 ? "s" : "");
+      $("run-row").hidden = false; $("plan-fine").hidden = false;
+    }).catch(function (e) {
+      $("plan-err").textContent = e.message; $("plan-err").hidden = false;
+    }).then(function () { $("plan-btn").disabled = false; $("plan-btn").textContent = "Plan rebalance"; });
+  }
+
+  // ===== Execution =====
+  function pad32(hex) { return hex.replace(/^0x/, "").toLowerCase().padStart(64, "0"); }
+  function call(to, data) { return eth.request({ method: "eth_call", params: [{ to: to, data: data }, "latest"] }); }
+  function balanceOf(token, owner) { return call(token, "0x70a08231" + pad32(owner)).then(function (r) { return BigInt(r && r !== "0x" ? r : "0x0"); }); }
+  function allowance(token, owner, spender) { return call(token, "0xdd62ed3e" + pad32(owner) + pad32(spender)).then(function (r) { return BigInt(r && r !== "0x" ? r : "0x0"); }); }
+
+  function waitReceipt(hash) {
+    var started = Date.now();
+    return new Promise(function (resolve, reject) {
+      (function poll() {
+        eth.request({ method: "eth_getTransactionReceipt", params: [hash] }).then(function (r) {
+          if (r && r.status) return r.status === "0x1" ? resolve(r) : reject(new Error("Transaction failed on-chain."));
+          if (Date.now() - started > 180000) return reject(new Error("Still pending after 3 minutes. Check it in the explorer."));
+          setTimeout(poll, 1500);
+        }).catch(function () { setTimeout(poll, 2500); });
+      })();
+    });
+  }
+  function txLink(hash, text) { return '<a href="' + CFG.explorer + "/tx/" + hash + '" target="_blank" rel="noopener">' + text + "</a>"; }
+
+  function runTrade(t, i) {
+    var st = $("st" + i), row = $("t" + i);
+    var byS = {}; CFG.assets.forEach(function (a) { byS[a.symbol] = a; });
+    var fromToken = byS[t.from];
+    // Spend what the wallet actually has, never more than planned.
+    return balanceOf(fromToken.address, account).then(function (bal) {
+      var amount = BigInt(t.amountRaw);
+      if (bal < amount) amount = bal;
+      if (amount <= 0n) throw new Error("No " + t.from + " left to trade.");
+      st.textContent = "Getting the best route…";
+      return getJSON("/api/quote?address=" + account + "&from=" + t.from + "&to=" + t.to + "&amount=" + amount.toString()).then(function (q) {
+        if (q._status !== 200) throw new Error(q.error || "No route right now.");
+        return allowance(fromToken.address, account, q.approvalAddress).then(function (al) {
+          if (al >= amount) return;
+          st.textContent = "Approve " + t.from + " in your wallet…";
+          var data = "0x095ea7b3" + pad32(q.approvalAddress) + pad32(amount.toString(16));
+          return eth.request({ method: "eth_sendTransaction", params: [{ from: account, to: fromToken.address, data: data }] }).then(function (h) {
+            st.innerHTML = "Approving… " + txLink(h, "view");
+            return waitReceipt(h);
+          });
+        }).then(function () {
+          st.textContent = "Confirm the swap in your wallet…";
+          var tx = { from: account, to: q.tx.to, data: q.tx.data, value: q.tx.value || "0x0" };
+          if (q.tx.gasLimit) tx.gas = q.tx.gasLimit;
+          return eth.request({ method: "eth_sendTransaction", params: [tx] });
+        }).then(function (h) {
+          st.innerHTML = "Swapping… " + txLink(h, "view");
+          return waitReceipt(h).then(function () {
+            row.classList.add("done");
+            st.innerHTML = "Done via " + esc(q.venue || "LiFi") + " · " + txLink(h, "view transaction");
+          });
+        });
+      });
+    }).catch(function (e) {
+      row.classList.add("fail");
+      st.textContent = walletError(e);
+      throw e;
+    });
+  }
+
+  function runAll() {
+    if (!lastPlan || running) return;
+    running = true;
+    $("run-btn").disabled = true; $("plan-btn").disabled = true; $("plan-err").hidden = true;
+    ensureChain().then(function () {
+      var chainP = Promise.resolve();
+      lastPlan.trades.forEach(function (t, i) { chainP = chainP.then(function () { return runTrade(t, i); }); });
+      return chainP;
+    }).then(function () {
+      toast("Rebalance complete");
+      $("run-row").hidden = true;
+      $("plan-title").textContent = "Back on course";
+    }).catch(function (e) {
+      $("plan-err").textContent = "Stopped: " + walletError(e) + " Trades that finished are kept. Plan again to continue from where you are.";
+      $("plan-err").hidden = false;
+    }).then(function () {
+      running = false;
+      $("run-btn").disabled = false; $("plan-btn").disabled = false;
+      load();
+    });
+  }
+
+  // ===== Wire up =====
+  $("connect-btn").addEventListener("click", connect);
+  $("wallet-btn").addEventListener("click", function () { if (!account) connect(); else { navigator.clipboard && navigator.clipboard.writeText(account).then(function () { toast("Address copied"); }, function () {}); } });
+  $("gate-recheck").addEventListener("click", load);
+  $("refresh-btn").addEventListener("click", load);
+  $("plan-btn").addEventListener("click", plan);
+  $("run-btn").addEventListener("click", runAll);
+  document.querySelectorAll(".seg button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (running) return;
+      course = b.getAttribute("data-course");
+      if (account) store("helm_course_" + account.toLowerCase(), course);
+      renderCourse(); resetPlan(); load();
+    });
+  });
+
+  getJSON("/api/config").then(function (cfg) {
+    CFG = cfg;
+    $("buy-link").href = cfg.buyUrl; $("gate-buy").href = cfg.buyUrl;
+    renderCourse();
+    if (!eth) return;
+    eth.on && eth.on("accountsChanged", function (a) { resetPlan(); setAccount(a && a[0]); });
+    eth.on && eth.on("chainChanged", function () { load(); });
+    eth.request({ method: "eth_accounts" }).then(function (a) { if (a && a[0]) setAccount(a[0]); });
+  }).catch(function () { $("connect-err").textContent = "Couldn't reach Helm. Refresh the page."; $("connect-err").hidden = false; });
+})();
+</script>
+</body>
+</html>
